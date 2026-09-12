@@ -104,3 +104,120 @@ export function drawLineChart(canvas, points, { yLabel = "", suffix = "" } = {})
     ctx.fillText(p.label, xFor(i), cssHeight - 10);
   });
 }
+
+/**
+ * Multi-series overlay line chart, all series sharing one y-axis.
+ * xLabels: string[]. series: [{ lift, colorVar, label, values: (number|null)[] }]
+ * values length must match xLabels length; null = no data at that x slot (line skips the gap).
+ */
+export function drawMultiLineChart(canvas, { xLabels, series, suffix = "" } = {}) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.parentElement ? Math.max(280, canvas.parentElement.clientWidth) : 320;
+  const cssHeight = 240;
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const border = readCssColor("--border", "#e2e8f0");
+  const textMuted = readCssColor("--text-muted", "#64748b");
+  const text = readCssColor("--text", "#0f172a");
+
+  const allValues = series.flatMap((s) => s.values.filter((v) => v != null));
+  if (!xLabels || xLabels.length === 0 || allValues.length === 0) {
+    ctx.fillStyle = textMuted;
+    ctx.font = "13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("No data yet", cssWidth / 2, cssHeight / 2);
+    return;
+  }
+
+  const padding = { top: 28, right: 16, bottom: 28, left: 44 };
+  const plotW = cssWidth - padding.left - padding.right;
+  const plotH = cssHeight - padding.top - padding.bottom;
+
+  let min = Math.min(...allValues);
+  let max = Math.max(...allValues);
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+  const rangePad = (max - min) * 0.18;
+  min -= rangePad;
+  max += rangePad;
+
+  const xFor = (i) => padding.left + (xLabels.length === 1 ? plotW / 2 : (i / (xLabels.length - 1)) * plotW);
+  const yFor = (v) => padding.top + plotH - ((v - min) / (max - min)) * plotH;
+
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 1;
+  ctx.font = "11px sans-serif";
+  ctx.fillStyle = textMuted;
+  ctx.textAlign = "right";
+  const gridLines = 4;
+  for (let i = 0; i <= gridLines; i++) {
+    const v = min + ((max - min) * i) / gridLines;
+    const y = yFor(v);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(cssWidth - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(Math.round(v) + suffix, padding.left - 6, y + 3);
+  }
+
+  series.forEach((s, seriesIndex) => {
+    const color = readCssColor(s.colorVar, "#0284c7");
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = "round";
+
+    let drawing = false;
+    ctx.beginPath();
+    s.values.forEach((v, i) => {
+      if (v == null) {
+        drawing = false;
+        return;
+      }
+      const x = xFor(i);
+      const y = yFor(v);
+      if (!drawing) {
+        ctx.moveTo(x, y);
+        drawing = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
+
+    ctx.font = "10px sans-serif";
+    // Stagger label offsets by series so close point values (common in an early
+    // week where every lift's numbers are still small) don't overlap.
+    const labelOffsets = [-9, -20, 16, 27];
+    const labelOffset = labelOffsets[seriesIndex % labelOffsets.length];
+    s.values.forEach((v, i) => {
+      if (v == null) return;
+      const x = xFor(i);
+      const y = yFor(v);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.fillText(String(v), x, y + labelOffset);
+    });
+  });
+
+  ctx.fillStyle = text;
+  ctx.textAlign = "center";
+  ctx.font = "10px sans-serif";
+  const maxLabels = Math.floor(plotW / 45) || 1;
+  const step = Math.max(1, Math.ceil(xLabels.length / maxLabels));
+  xLabels.forEach((label, i) => {
+    if (i % step !== 0 && i !== xLabels.length - 1) return;
+    ctx.fillText(label, xFor(i), cssHeight - 8);
+  });
+}

@@ -1,4 +1,4 @@
-import { dayInfo } from "../program.js";
+import { dayInfo, DAY_COUNT } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
 import { lastAccessoryLog } from "../state.js";
 
@@ -113,7 +113,18 @@ export function renderToday(root, ctx) {
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
 
-  let html = `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of 4 · Day ${dayIndex} of 6</div>`;
+  let html = `<div class="day-picker">
+    ${Array.from({ length: DAY_COUNT }, (_, i) => i + 1)
+      .map((i) => {
+        const d = dayInfo(i);
+        return `<button class="day-pill ${i === dayIndex ? "active" : ""}" data-action="choose-day" data-day="${i}">
+          <span class="day-pill-num">${i}</span>
+          <span class="day-pill-name">${escapeHtml(d.name)}</span>
+        </button>`;
+      })
+      .join("")}
+  </div>`;
+  html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of 4 · Day ${dayIndex} of 6</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
   if (isMainDay) {
@@ -187,6 +198,10 @@ export function renderToday(root, ctx) {
 
 function wireActions(root, ctx) {
   const { actions } = ctx;
+
+  root.querySelectorAll('[data-action="choose-day"]').forEach((el) =>
+    el.addEventListener("click", () => actions.chooseDay(Number(el.dataset.day)))
+  );
 
   root.querySelectorAll('[data-action="toggle-main"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleMainSet(Number(el.dataset.index)))

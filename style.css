@@ -446,6 +446,169 @@ button, input, select, textarea {
   overflow-x: auto;
 }
 
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.day-picker {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.day-picker::-webkit-scrollbar { display: none; }
+
+.day-pill {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 68px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.day-pill-num {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.day-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.day-pill.active .day-pill-num,
+.day-pill.active .day-pill-name {
+  color: var(--accent-text);
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
+.cal-cell.muted {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.cal-cell.has-session {
+  font-weight: 600;
+}
+
+.cal-cell.is-today {
+  background: var(--bg);
+  outline: 1px solid var(--border);
+}
+
+.cal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: transparent;
+}
+
+.cal-dot-multi {
+  background: var(--text-muted);
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.session-detail-group {
+  margin-bottom: 14px;
+}
+
+.session-detail-group h4 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.session-detail-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-detail-line:last-child { border-bottom: none; }
+
+.session-detail-check {
+  font-weight: 700;
+}
+.session-detail-check.yes { color: var(--success); }
+.session-detail-check.no { color: var(--danger); }
+
 canvas.chart-canvas {
   display: block;
   max-width: 100%;

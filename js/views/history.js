@@ -1,32 +1,27 @@
-import { LIFTS } from "../calc.js";
-import { amrapHistory, bodyweightRollingAverage } from "../state.js";
-import { drawLineChart } from "../chart.js";
-
-const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
+import { bodyweightRollingAverage, combinedLiftMetricSeries } from "../state.js";
+import { drawLineChart, drawMultiLineChart } from "../chart.js";
+import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
 
 function shortDate(iso) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-let activeLift = "squat";
-let amrapMetric = "reps"; // 'reps' | 'e1rm'
+let liftMetric = "e1rm"; // 'e1rm' | 'volume'
 
 export function renderHistory(root, ctx) {
   const { state } = ctx;
 
   root.innerHTML = `
     <div class="card">
-      <h3>AMRAP history</h3>
-      <div class="pill-tabs" id="lift-tabs">
-        ${LIFTS.map((l) => `<button class="pill-tab ${l === activeLift ? "active" : ""}" data-lift="${l}">${LIFT_LABELS[l]}</button>`).join("")}
-      </div>
+      <h3>Main lifts over time</h3>
       <div class="pill-tabs" id="metric-tabs">
-        <button class="pill-tab ${amrapMetric === "reps" ? "active" : ""}" data-metric="reps">AMRAP reps</button>
-        <button class="pill-tab ${amrapMetric === "e1rm" ? "active" : ""}" data-metric="e1rm">Est. 1RM</button>
+        <button class="pill-tab ${liftMetric === "e1rm" ? "active" : ""}" data-metric="e1rm">Est. 1RM</button>
+        <button class="pill-tab ${liftMetric === "volume" ? "active" : ""}" data-metric="volume">Volume</button>
       </div>
-      <div class="chart-wrap"><canvas class="chart-canvas" id="amrap-chart"></canvas></div>
-      <div id="amrap-empty"></div>
+      <div class="chart-wrap"><canvas class="chart-canvas" id="lift-chart"></canvas></div>
+      <div id="lift-chart-empty"></div>
+      <div class="chart-legend" id="lift-legend"></div>
     </div>
 
     <div class="card">
@@ -47,18 +42,12 @@ export function renderHistory(root, ctx) {
     </div>
   `;
 
-  renderAmrapChart(root, state);
+  renderLiftChart(root, state);
   renderBodyweight(root, state, ctx);
 
-  root.querySelectorAll("#lift-tabs .pill-tab").forEach((btn) =>
-    btn.addEventListener("click", () => {
-      activeLift = btn.dataset.lift;
-      renderHistory(root, ctx);
-    })
-  );
   root.querySelectorAll("#metric-tabs .pill-tab").forEach((btn) =>
     btn.addEventListener("click", () => {
-      amrapMetric = btn.dataset.metric;
+      liftMetric = btn.dataset.metric;
       renderHistory(root, ctx);
     })
   );
@@ -71,18 +60,28 @@ export function renderHistory(root, ctx) {
   });
 }
 
-function renderAmrapChart(root, state) {
-  const history = amrapHistory(state.sessionLogs, activeLift);
-  const canvas = root.querySelector("#amrap-chart");
-  const points = history.map((h) => ({
-    label: shortDate(h.date),
-    value: amrapMetric === "reps" ? h.reps : Math.round(h.e1rm),
-  }));
-  canvas.hidden = points.length === 0;
-  if (points.length) drawLineChart(canvas, points, { suffix: amrapMetric === "reps" ? "" : " lb" });
-  root.querySelector("#amrap-empty").innerHTML = points.length
+function renderLiftChart(root, state) {
+  const { xLabels, series } = combinedLiftMetricSeries(state.sessionLogs, liftMetric);
+  const canvas = root.querySelector("#lift-chart");
+  const orderedSeries = LIFT_ORDER.map((lift) => series.find((s) => s.lift === lift)).filter(Boolean);
+  const hasData = orderedSeries.some((s) => s.values.some((v) => v != null));
+
+  canvas.hidden = !hasData;
+  if (hasData) {
+    drawMultiLineChart(canvas, {
+      xLabels,
+      series: orderedSeries.map((s) => ({ ...s, colorVar: LIFT_META[s.lift].colorVar })),
+      suffix: liftMetric === "e1rm" ? " lb" : "",
+    });
+  }
+  root.querySelector("#lift-chart-empty").innerHTML = hasData
     ? ""
-    : `<div class="empty-state">No AMRAP sets logged for this lift yet.</div>`;
+    : `<div class="empty-state">No main-lift sessions logged yet.</div>`;
+
+  root.querySelector("#lift-legend").innerHTML = LIFT_ORDER.map(
+    (lift) =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:var(${LIFT_META[lift].colorVar})"></span>${LIFT_META[lift].label}</span>`
+  ).join("");
 }
 
 function renderBodyweight(root, state, ctx) {

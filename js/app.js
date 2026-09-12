@@ -1,10 +1,11 @@
 import { loadState, saveState, exportStateJSON, importStateJSON } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog } from "./state.js";
-import { dayInfo } from "./program.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate } from "./state.js";
+import { dayInfo, DAY_COUNT } from "./program.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
+import { renderCalendar } from "./views/calendar.js";
 import { startRestTimer, cancelRestTimer, subscribeRestTimer, formatMs } from "./timer.js";
 
 let state = loadState();
@@ -36,7 +37,12 @@ function buildSessionForCurrentCycle() {
     }
   }
 
-  return newSessionLog(state.cycleState, mainSets, supplementalSets, day.accessories);
+  const session = newSessionLog(state.cycleState, mainSets, supplementalSets, day.accessories);
+  session.accessorySets = session.accessorySets.map((entry) => {
+    const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
+    return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
+  });
+  return session;
 }
 
 function ensureCurrentSession() {
@@ -66,6 +72,8 @@ function renderCurrentView() {
     renderToday(viewRoot, { state, actions });
   } else if (currentView === "history") {
     renderHistory(viewRoot, { state, actions });
+  } else if (currentView === "calendar") {
+    renderCalendar(viewRoot, { state, actions });
   } else if (currentView === "settings") {
     renderSettings(viewRoot, { state, actions });
   }
@@ -123,6 +131,57 @@ function promptCycleCompletion() {
       });
     }
   );
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function detailLine(label, weight, reps, completed) {
+  const amount = [weight != null ? `${weight} lb` : null, reps != null ? `× ${reps}` : null].filter(Boolean).join(" ");
+  const check = completed == null ? "" : `<span class="session-detail-check ${completed ? "yes" : "no"}">${completed ? "✓" : "✕"}</span>`;
+  return `<div class="session-detail-line"><span>${escapeHtml(label)}</span><span>${amount} ${check}</span></div>`;
+}
+
+function renderSessionDetail(log) {
+  const day = dayInfo(log.dayIndex);
+  let html = `<h2>${escapeHtml(day.name)}</h2>
+    <p class="set-meta">${new Date(log.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+    · Cycle ${log.cycleNumber ?? 1} · Week ${log.weekIndex}${log.completed ? "" : " · skipped"}</p>`;
+
+  if (log.warmupSets?.length) {
+    html += `<div class="session-detail-group"><h4>Warm-up</h4>${log.warmupSets
+      .map((s, i) => detailLine(`Set ${i + 1}`, s.weight, s.actualReps ?? s.reps, s.completed))
+      .join("")}</div>`;
+  }
+  if (log.mainSets?.length) {
+    html += `<div class="session-detail-group"><h4>Main sets</h4>${log.mainSets
+      .map((s, i) => detailLine(`Set ${i + 1}${s.isAmrap ? " (AMRAP)" : ""}`, s.weight, s.actualReps, s.completed))
+      .join("")}</div>`;
+  }
+  if (log.supplementalSets?.length) {
+    const label = log.supplementalSets[0].type === "fsl" ? "FSL" : "Boring But Big";
+    html += `<div class="session-detail-group"><h4>${label}</h4>${log.supplementalSets
+      .map((s, i) => detailLine(`Set ${i + 1}`, s.weight, s.reps, s.completed))
+      .join("")}</div>`;
+  }
+  if (log.accessorySets?.length) {
+    const byExercise = new Map();
+    for (const s of log.accessorySets) {
+      if (!byExercise.has(s.exerciseName)) byExercise.set(s.exerciseName, []);
+      byExercise.get(s.exerciseName).push(s);
+    }
+    for (const [name, sets] of byExercise) {
+      html += `<div class="session-detail-group"><h4>${escapeHtml(name)}</h4>${sets
+        .map((s, i) => detailLine(`Set ${i + 1}`, s.weight, s.reps, s.completed))
+        .join("")}</div>`;
+    }
+  }
+  if (log.notes) {
+    html += `<div class="session-detail-group"><h4>Notes</h4><p>${escapeHtml(log.notes)}</p></div>`;
+  }
+  html += `<div class="btn-row"><button class="btn btn-block" id="detail-close">Close</button></div>`;
+  return html;
 }
 
 function finishDay(completed) {
@@ -200,6 +259,35 @@ const actions = {
   },
   skipDay() {
     finishDay(false);
+  },
+  chooseDay(dayIndex) {
+    if (dayIndex < 1 || dayIndex > DAY_COUNT || dayIndex === state.cycleState.dayIndex) return;
+    state.cycleState = { ...state.cycleState, dayIndex };
+    persist();
+    renderCurrentView();
+  },
+  viewSessionsForDate(dateKey) {
+    const logs = sessionsByDate(state.sessionLogs).get(dateKey) || [];
+    if (logs.length === 0) return;
+    if (logs.length === 1) {
+      showModal(renderSessionDetail(logs[0]), (root) => {
+        root.querySelector("#detail-close")?.addEventListener("click", closeModal);
+      });
+      return;
+    }
+    const listHtml = `<h2>${new Date(dateKey).toLocaleDateString()}</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        ${logs.map((log, i) => `<button class="btn btn-block" data-log-index="${i}">${dayInfo(log.dayIndex).name}</button>`).join("")}
+      </div>`;
+    showModal(listHtml, (root) => {
+      root.querySelectorAll("[data-log-index]").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          showModal(renderSessionDetail(logs[Number(btn.dataset.logIndex)]), (r) => {
+            r.querySelector("#detail-close")?.addEventListener("click", closeModal);
+          });
+        })
+      );
+    });
   },
   setTrainingMax(lift, value) {
     state.trainingMaxes[lift] = { currentValue: value, updatedAt: new Date().toISOString() };

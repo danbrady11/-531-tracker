@@ -1,0 +1,101 @@
+import { sessionsByDate } from "../state.js";
+import { dayInfo } from "../program.js";
+import { LIFT_META, NON_LIFT_COLOR_VAR } from "../lift-meta.js";
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+// Module-local view state: which month is currently displayed. Resets to the
+// real-world current month isn't necessary across renders since we keep it here.
+let viewYear = new Date().getFullYear();
+let viewMonth = new Date().getMonth(); // 0-11
+
+function dateKey(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function colorVarForLog(log) {
+  const day = dayInfo(log.dayIndex);
+  return day.lift ? LIFT_META[day.lift].colorVar : NON_LIFT_COLOR_VAR;
+}
+
+export function renderCalendar(root, ctx) {
+  const { state } = ctx;
+  const byDate = sessionsByDate(state.sessionLogs);
+  const today = new Date();
+  const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) {
+    cells.push({ day: daysInPrevMonth - startWeekday + 1 + i, muted: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, muted: false, key: dateKey(viewYear, viewMonth, d) });
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: cells.length - startWeekday - daysInMonth + 1, muted: true });
+  }
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="cal-header">
+        <button class="btn btn-sm btn-ghost" id="cal-prev" aria-label="Previous month">‹</button>
+        <h3 style="margin:0;text-transform:none;letter-spacing:0;">${MONTH_NAMES[viewMonth]} ${viewYear}</h3>
+        <button class="btn btn-sm btn-ghost" id="cal-next" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-weekdays">${WEEKDAY_LABELS.map((w) => `<div>${w}</div>`).join("")}</div>
+      <div class="cal-grid">
+        ${cells
+          .map((c) => {
+            if (c.muted) return `<div class="cal-cell muted"><span>${c.day}</span></div>`;
+            const logs = byDate.get(c.key) || [];
+            const isToday = c.key === todayKey;
+            let dotHtml = "";
+            if (logs.length === 1) {
+              dotHtml = `<span class="cal-dot" style="border-color:var(${colorVarForLog(logs[0])})"></span>`;
+            } else if (logs.length > 1) {
+              dotHtml = `<span class="cal-dot cal-dot-multi" style="border-color:var(--text-muted)"></span>`;
+            }
+            return `<button class="cal-cell ${logs.length ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
+              <span>${c.day}</span>
+              ${dotHtml}
+            </button>`;
+          })
+          .join("")}
+      </div>
+      <div class="cal-legend">
+        ${Object.entries(LIFT_META)
+          .map(([, meta]) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
+          .join("")}
+      </div>
+    </div>
+  `;
+
+  root.querySelector("#cal-prev").addEventListener("click", () => {
+    viewMonth -= 1;
+    if (viewMonth < 0) {
+      viewMonth = 11;
+      viewYear -= 1;
+    }
+    renderCalendar(root, ctx);
+  });
+  root.querySelector("#cal-next").addEventListener("click", () => {
+    viewMonth += 1;
+    if (viewMonth > 11) {
+      viewMonth = 0;
+      viewYear += 1;
+    }
+    renderCalendar(root, ctx);
+  });
+  root.querySelectorAll('[data-action="cal-day"]').forEach((el) =>
+    el.addEventListener("click", () => ctx.actions.viewSessionsForDate(el.dataset.key))
+  );
+}

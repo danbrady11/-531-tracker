@@ -1,5 +1,5 @@
 import { DAY_COUNT, WEEK_COUNT, dayInfo } from "./program.js";
-import { nextTrainingMax, epleyE1RM } from "./calc.js";
+import { nextTrainingMax, epleyE1RM, LIFTS } from "./calc.js";
 
 /** Advance the cycle by one day. Wrapping day 6->1 advances the week; wrapping week 4->1 completes a cycle. */
 export function advanceCycle(cycleState) {
@@ -79,14 +79,88 @@ export function bodyweightRollingAverage(entries) {
   });
 }
 
+/** Total working weight lifted in a session: completed main + supplemental sets (accessories excluded). */
+export function sessionVolume(log) {
+  const mainVol = (log.mainSets || []).reduce(
+    (sum, s) => (s.completed && s.actualReps ? sum + s.weight * s.actualReps : sum),
+    0
+  );
+  const suppVol = (log.supplementalSets || []).reduce(
+    (sum, s) => (s.completed && s.reps ? sum + s.weight * s.reps : sum),
+    0
+  );
+  return mainVol + suppVol;
+}
+
+/** Volume history for a lift: [{date, weekIndex, volume}], oldest first. */
+export function volumeHistory(sessionLogs, lift) {
+  return sessionLogs
+    .filter((log) => log.lift === lift && log.completed)
+    .map((log) => ({ date: log.date, weekIndex: log.weekIndex, volume: Math.round(sessionVolume(log)) }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/**
+ * Combined series for all four main lifts, aligned to a shared x-axis of program
+ * weeks (cycle+week), for the overlay chart in History. metric is 'e1rm' or 'volume'.
+ * Each series' values array is the same length as xLabels; null where that lift
+ * had no session that week (the chart just skips the gap rather than interpolating).
+ */
+export function combinedLiftMetricSeries(sessionLogs, metric) {
+  const weekKey = (log) => `${log.cycleNumber ?? 1}-${log.weekIndex}`;
+  const mainLogs = sessionLogs.filter((log) => LIFTS.includes(log.lift) && log.completed);
+
+  const keys = [...new Set(mainLogs.map(weekKey))].sort((a, b) => {
+    const [ac, aw] = a.split("-").map(Number);
+    const [bc, bw] = b.split("-").map(Number);
+    return ac - bc || aw - bw;
+  });
+  const xLabels = keys.map((k) => {
+    const [c, w] = k.split("-");
+    return `C${c}W${w}`;
+  });
+
+  const series = LIFTS.map((lift) => {
+    const byKey = new Map();
+    mainLogs
+      .filter((log) => log.lift === lift)
+      .forEach((log) => {
+        let value = null;
+        if (metric === "e1rm") {
+          const amrapSet = (log.mainSets || []).find((s) => s.isAmrap && s.actualReps != null);
+          if (amrapSet) value = epleyE1RM(amrapSet.weight, amrapSet.actualReps);
+        } else if (metric === "volume") {
+          value = sessionVolume(log);
+        }
+        if (value != null) byKey.set(weekKey(log), Math.round(value));
+      });
+    return { lift, values: keys.map((k) => (byKey.has(k) ? byKey.get(k) : null)) };
+  });
+
+  return { xLabels, series };
+}
+
+/** Group session logs by calendar date (YYYY-MM-DD, local time) for the Calendar view. */
+export function sessionsByDate(sessionLogs) {
+  const map = new Map();
+  for (const log of sessionLogs) {
+    const d = new Date(log.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(log);
+  }
+  return map;
+}
+
 /** Build a fresh (unlogged) SessionLog skeleton for the given cycle position. */
-export function newSessionLog({ dayIndex, weekIndex }, mainSets, supplementalSets, accessories) {
+export function newSessionLog({ dayIndex, weekIndex, cycleNumber }, mainSets, supplementalSets, accessories) {
   const day = dayInfo(dayIndex);
   return {
     id: `${Date.now()}`,
     date: new Date().toISOString(),
     dayIndex,
     weekIndex,
+    cycleNumber,
     lift: day.lift,
     completed: false,
     mainSets,
