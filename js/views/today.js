@@ -1,5 +1,5 @@
 import { dayInfo } from "../program.js";
-import { plateBreakdown, warmupSets } from "../calc.js";
+import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
 import { lastAccessoryLog } from "../state.js";
 
 function escapeHtml(s) {
@@ -14,6 +14,11 @@ function plateStripText(weight, barWeight) {
   let text = `Bar + ${parts.join(" + ")} /side`;
   if (remainder > 0) text += ` (+${remainder} unaccounted)`;
   return text;
+}
+
+function e1rmText(weight, reps) {
+  if (!weight || !reps) return "";
+  return `Est. 1RM ${Math.round(epleyE1RM(weight, reps))} lb`;
 }
 
 function mainSetRow(set, index, barWeight) {
@@ -34,6 +39,11 @@ function mainSetRow(set, index, barWeight) {
           set.actualReps != null ? ` · logged ${set.actualReps}` : ""
         }</div>
         <div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>
+        ${
+          set.isAmrap
+            ? `<div class="e1rm-line" data-e1rm-index="${index}">${e1rmText(set.weight, set.actualReps)}</div>`
+            : ""
+        }
       </div>
       ${
         set.isAmrap
@@ -181,15 +191,25 @@ function wireActions(root, ctx) {
   root.querySelectorAll('[data-action="toggle-main"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleMainSet(Number(el.dataset.index)))
   );
-  root.querySelectorAll('[data-action="main-weight"]').forEach((el) =>
-    el.addEventListener("change", () => actions.setMainWeight(Number(el.dataset.index), Number(el.value)))
-  );
+  const updateE1rmPreview = (index) => {
+    const line = root.querySelector(`[data-e1rm-index="${index}"]`);
+    if (!line) return;
+    const weightInput = root.querySelector(`[data-action="main-weight"][data-index="${index}"]`);
+    const repsInput = root.querySelector(`[data-action="amrap-reps"][data-index="${index}"]`);
+    line.textContent = e1rmText(Number(weightInput?.value), Number(repsInput?.value));
+  };
+
+  root.querySelectorAll('[data-action="main-weight"]').forEach((el) => {
+    el.addEventListener("change", () => actions.setMainWeight(Number(el.dataset.index), Number(el.value)));
+    el.addEventListener("input", () => updateE1rmPreview(Number(el.dataset.index)));
+  });
   root.querySelectorAll('[data-action="main-reps"]').forEach((el) =>
     el.addEventListener("change", () => actions.setMainReps(Number(el.dataset.index), el.value === "" ? null : Number(el.value)))
   );
-  root.querySelectorAll('[data-action="amrap-reps"]').forEach((el) =>
-    el.addEventListener("change", () => actions.setMainReps(Number(el.dataset.index), el.value === "" ? null : Number(el.value)))
-  );
+  root.querySelectorAll('[data-action="amrap-reps"]').forEach((el) => {
+    el.addEventListener("change", () => actions.setMainReps(Number(el.dataset.index), el.value === "" ? null : Number(el.value)));
+    el.addEventListener("input", () => updateE1rmPreview(Number(el.dataset.index)));
+  });
 
   root.querySelectorAll('[data-action="toggle-supp"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleSupplementalSet(el.dataset.kind, Number(el.dataset.index)))

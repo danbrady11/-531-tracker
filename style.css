@@ -249,6 +249,14 @@ button, input, select, textarea {
   margin-top: 2px;
 }
 
+.e1rm-line {
+  font-size: 0.8rem;
+  color: var(--amrap);
+  font-weight: 600;
+  margin-top: 4px;
+  min-height: 1.1em;
+}
+
 .set-input {
   width: 58px;
   height: 40px;
