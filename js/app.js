@@ -57,6 +57,55 @@ function scheduleCloudPush() {
   }, 800);
 }
 
+/** True if adopting `incoming` would silently throw away history this device already has. */
+function wouldLoseData(current, incoming) {
+  const curSessions = current?.sessionLogs?.length ?? 0;
+  const curBw = current?.bodyweightEntries?.length ?? 0;
+  const incSessions = incoming?.sessionLogs?.length ?? 0;
+  const incBw = incoming?.bodyweightEntries?.length ?? 0;
+  return (curSessions > 0 && incSessions < curSessions) || (curBw > 0 && incBw < curBw);
+}
+
+function adoptRemoteState(payload) {
+  lastKnownRemoteUpdatedAt = payload.updatedAt;
+  localUpdatedAt = payload.updatedAt;
+  state = migrate(payload.state);
+  saveState(state);
+}
+
+function promptSyncConflict(payload) {
+  const curSessions = state.sessionLogs?.length ?? 0;
+  const incSessions = payload.state?.sessionLogs?.length ?? 0;
+  showModal(
+    `<h2>Sync conflict</h2>
+     <p class="set-meta">The cloud copy has less history than this device — ${incSessions} logged session${incSessions === 1 ? "" : "s"} there vs ${curSessions} here. This usually means another device generated or linked a sync code before it had your real data. Which copy is right?</p>
+     <div class="btn-row"><button class="btn btn-primary btn-block" id="conflict-keep-local">Keep this device's data (push to cloud)</button></div>
+     <div class="btn-row"><button class="btn btn-block" id="conflict-use-cloud">Use the cloud's data anyway</button></div>`,
+    (root) => {
+      root.querySelector("#conflict-keep-local").addEventListener("click", async () => {
+        closeModal();
+        const code = getSyncCode();
+        localUpdatedAt = Date.now();
+        lastKnownRemoteUpdatedAt = localUpdatedAt;
+        setSyncStatus("syncing");
+        try {
+          await pushToCloud(code, state, localUpdatedAt);
+          setSyncStatus("synced", "Kept this device's data and pushed it to the cloud");
+        } catch (err) {
+          console.error(err);
+          setSyncStatus("error", "Push failed.");
+        }
+      });
+      root.querySelector("#conflict-use-cloud").addEventListener("click", () => {
+        closeModal();
+        adoptRemoteState(payload);
+        setSyncStatus("synced", "Adopted the cloud's data");
+        renderCurrentView();
+      });
+    }
+  );
+}
+
 function startWatchingCloud(code) {
   unwatchCloud?.();
   setSyncStatus("syncing");
@@ -64,16 +113,18 @@ function startWatchingCloud(code) {
     code,
     (payload) => {
       if (!payload || typeof payload.updatedAt !== "number") return;
-      if (payload.updatedAt > lastKnownRemoteUpdatedAt) {
-        lastKnownRemoteUpdatedAt = payload.updatedAt;
-        localUpdatedAt = payload.updatedAt;
-        state = migrate(payload.state);
-        saveState(state);
-        setSyncStatus("synced", "Synced from your other device");
-        renderCurrentView();
-      } else {
+      if (payload.updatedAt <= lastKnownRemoteUpdatedAt) {
         setSyncStatus("synced");
+        return;
       }
+      if (wouldLoseData(state, payload.state)) {
+        lastKnownRemoteUpdatedAt = payload.updatedAt; // don't re-prompt for the same payload
+        promptSyncConflict(payload);
+        return;
+      }
+      adoptRemoteState(payload);
+      setSyncStatus("synced", "Synced from your other device");
+      renderCurrentView();
     },
     (err) => {
       console.error("Cloud watch failed", err);
@@ -85,6 +136,23 @@ function startWatchingCloud(code) {
 function initCloudSync() {
   const code = getSyncCode();
   if (code) startWatchingCloud(code);
+}
+
+async function doGenerateAndLinkSyncCode() {
+  const code = generateSyncCode();
+  setSyncCodeLocally(code);
+  localUpdatedAt = Date.now();
+  lastKnownRemoteUpdatedAt = localUpdatedAt;
+  setSyncStatus("syncing");
+  try {
+    await pushToCloud(code, state, localUpdatedAt);
+    startWatchingCloud(code);
+    showToast(`Sync code ${code} created`);
+  } catch (err) {
+    console.error(err);
+    setSyncStatus("error", "Couldn't reach the cloud to create a sync code.");
+  }
+  renderCurrentView();
 }
 
 function persist() {
@@ -414,22 +482,28 @@ const actions = {
     }
   },
   // This device becomes the source of truth for a brand-new sync code: it
-  // seeds the cloud with this device's current data.
+  // seeds the cloud with this device's current data. Warn first if this
+  // device looks empty — that's the classic "generated on the wrong device"
+  // mistake, and it would make an empty copy the seed that other devices
+  // then adopt.
   async generateAndLinkSyncCode() {
-    const code = generateSyncCode();
-    setSyncCodeLocally(code);
-    localUpdatedAt = Date.now();
-    lastKnownRemoteUpdatedAt = localUpdatedAt;
-    setSyncStatus("syncing");
-    try {
-      await pushToCloud(code, state, localUpdatedAt);
-      startWatchingCloud(code);
-      showToast(`Sync code ${code} created`);
-    } catch (err) {
-      console.error(err);
-      setSyncStatus("error", "Couldn't reach the cloud to create a sync code.");
+    if ((state.sessionLogs?.length ?? 0) === 0) {
+      showModal(
+        `<h2>No history on this device yet</h2>
+         <p class="set-meta">Generating a code here makes THIS device's (currently empty) data the source of truth — linking your other device to it would replace its history with nothing. If your real data is on another device, cancel and use "Enter a code from another device" there instead.</p>
+         <div class="btn-row"><button class="btn btn-block" id="gen-cancel">Cancel</button></div>
+         <div class="btn-row"><button class="btn btn-danger btn-block" id="gen-anyway">Generate anyway</button></div>`,
+        (root) => {
+          root.querySelector("#gen-cancel").addEventListener("click", closeModal);
+          root.querySelector("#gen-anyway").addEventListener("click", () => {
+            closeModal();
+            doGenerateAndLinkSyncCode();
+          });
+        }
+      );
+      return;
     }
-    renderCurrentView();
+    await doGenerateAndLinkSyncCode();
   },
   // Joining an EXISTING code (a second device): never push first, or this
   // device's un-synced local data would clobber the shared copy. Just start
@@ -469,11 +543,13 @@ const actions = {
     setSyncStatus("syncing");
     try {
       const payload = await pullFromCloud(code);
+      if (payload && wouldLoseData(state, payload.state)) {
+        setSyncStatus("idle");
+        promptSyncConflict(payload);
+        return;
+      }
       if (payload) {
-        lastKnownRemoteUpdatedAt = payload.updatedAt;
-        localUpdatedAt = payload.updatedAt;
-        state = migrate(payload.state);
-        saveState(state);
+        adoptRemoteState(payload);
         setSyncStatus("synced", "Pulled the cloud's data onto this device");
       } else {
         setSyncStatus("error", "No data found for that sync code.");
