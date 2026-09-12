@@ -1,0 +1,132 @@
+import { LIFTS } from "../calc.js";
+
+const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
+
+export function renderSettings(root, ctx) {
+  const { state } = ctx;
+  const s = state.settings;
+
+  const tmTiles = LIFTS.map((lift) => {
+    const tm = state.trainingMaxes[lift];
+    return `
+      <div class="tm-tile">
+        <div class="tm-tile-name">${LIFT_LABELS[lift]}</div>
+        <input class="set-input tm-tile-value" style="width:100%;font-size:1.1rem;" type="number" step="5"
+          value="${tm.currentValue}" data-action="edit-tm" data-lift="${lift}" />
+        <div class="set-meta">+${s.tmIncrements[lift]} lb / cycle</div>
+      </div>`;
+  }).join("");
+
+  root.innerHTML = `
+    <div class="card">
+      <h3>Training Maxes</h3>
+      <div class="tm-grid">${tmTiles}</div>
+    </div>
+
+    <div class="card">
+      <h3>Cycle position</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Day (1–6)</label>
+          <input class="set-input" style="width:100%" type="number" min="1" max="6" value="${state.cycleState.dayIndex}" data-action="edit-day" />
+        </div>
+        <div class="field">
+          <label>Week (1–4)</label>
+          <input class="set-input" style="width:100%" type="number" min="1" max="4" value="${state.cycleState.weekIndex}" data-action="edit-week" />
+        </div>
+      </div>
+      <div class="set-meta">Cycle number: ${state.cycleState.cycleNumber}</div>
+    </div>
+
+    <div class="card">
+      <h3>Program settings</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Bar weight (lb)</label>
+          <input class="set-input" style="width:100%" type="number" step="5" value="${s.barWeight}" data-action="setting" data-key="barWeight" />
+        </div>
+        <div class="field">
+          <label>Round down to (lb)</label>
+          <input class="set-input" style="width:100%" type="number" step="0.5" value="${s.roundingIncrement}" data-action="setting" data-key="roundingIncrement" />
+        </div>
+      </div>
+      <div class="field">
+        <label>BBB percentage of TM (%)</label>
+        <input class="set-input" style="width:100%" type="number" step="5" value="${Math.round(s.bbbPercentage * 100)}" data-action="setting-pct" data-key="bbbPercentage" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Main set rest (sec)</label>
+          <input class="set-input" style="width:100%" type="number" step="15" value="${s.restTimerMainSec}" data-action="setting" data-key="restTimerMainSec" />
+        </div>
+        <div class="field">
+          <label>Isolation rest (sec)</label>
+          <input class="set-input" style="width:100%" type="number" step="15" value="${s.restTimerIsolationSec}" data-action="setting" data-key="restTimerIsolationSec" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Theme</label>
+        <select data-action="setting" data-key="theme">
+          <option value="system" ${s.theme === "system" ? "selected" : ""}>System</option>
+          <option value="light" ${s.theme === "light" ? "selected" : ""}>Light</option>
+          <option value="dark" ${s.theme === "dark" ? "selected" : ""}>Dark</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>TM increments per cycle (lb)</h3>
+      <div class="field-row">
+        ${LIFTS.map(
+          (lift) => `
+          <div class="field">
+            <label>${LIFT_LABELS[lift]}</label>
+            <input class="set-input" style="width:100%" type="number" step="2.5" value="${s.tmIncrements[lift]}" data-action="setting-tm-inc" data-lift="${lift}" />
+          </div>`
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Data</h3>
+      <div class="btn-row">
+        <button class="btn btn-block" data-action="export-json">Export JSON</button>
+      </div>
+      <div class="btn-row">
+        <label class="btn btn-block" style="cursor:pointer;">
+          Import JSON
+          <input type="file" accept="application/json" data-action="import-json" style="display:none" />
+        </label>
+      </div>
+    </div>
+  `;
+
+  root.querySelectorAll('[data-action="edit-tm"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setTrainingMax(el.dataset.lift, Number(el.value)))
+  );
+  root.querySelector('[data-action="edit-day"]')?.addEventListener("change", (e) =>
+    ctx.actions.setCyclePosition({ dayIndex: Number(e.target.value) })
+  );
+  root.querySelector('[data-action="edit-week"]')?.addEventListener("change", (e) =>
+    ctx.actions.setCyclePosition({ weekIndex: Number(e.target.value) })
+  );
+
+  root.querySelectorAll('[data-action="setting"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, el.type === "number" ? Number(el.value) : el.value))
+  );
+  root.querySelectorAll('[data-action="setting-pct"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, Number(el.value) / 100))
+  );
+  root.querySelectorAll('[data-action="setting-tm-inc"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setTmIncrement(el.dataset.lift, Number(el.value)))
+  );
+
+  root.querySelector('[data-action="export-json"]')?.addEventListener("click", () => ctx.actions.exportJSON());
+  root.querySelector('[data-action="import-json"]')?.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => ctx.actions.importJSON(reader.result);
+    reader.readAsText(file);
+  });
+}
