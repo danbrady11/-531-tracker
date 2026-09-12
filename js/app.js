@@ -390,6 +390,38 @@ const actions = {
     entry[field] = value;
     persist();
   },
+  // Ad hoc exercise added to just this session, beyond the day's fixed
+  // accessory list. Remembers the name in state.customExercises so it shows
+  // up in the "add exercise" dropdown on any future day too.
+  addAdHocExercise(name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (!state.customExercises.includes(trimmed)) {
+      state.customExercises = [...state.customExercises, trimmed].sort((a, b) => a.localeCompare(b));
+    }
+    const alreadyInSession = state.currentSession.accessorySets.some((s) => s.exerciseName === trimmed);
+    if (!alreadyInSession) {
+      const DEFAULT_SETS = 3;
+      const newSets = Array.from({ length: DEFAULT_SETS }, (_, setIndex) => {
+        const prefill = lastAccessoryLog(state.sessionLogs, trimmed, setIndex);
+        return {
+          exerciseName: trimmed,
+          setIndex,
+          weight: prefill?.weight ?? null,
+          reps: prefill?.reps ?? null,
+          completed: false,
+        };
+      });
+      state.currentSession.accessorySets = [...state.currentSession.accessorySets, ...newSets];
+    }
+    persist();
+    renderCurrentView();
+  },
+  removeAdHocExercise(exerciseName) {
+    state.currentSession.accessorySets = state.currentSession.accessorySets.filter((s) => s.exerciseName !== exerciseName);
+    persist();
+    renderCurrentView();
+  },
   updateNotes(text) {
     state.currentSession.notes = text;
     persist();

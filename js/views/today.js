@@ -105,6 +105,46 @@ function accessoryBlock(accessory, session, sessionLogs) {
     </div>`;
 }
 
+/** An exercise added ad hoc to just this session — not part of the day's fixed list. */
+function extraAccessoryBlock(exerciseName, session, sessionLogs) {
+  const entries = (session.accessorySets || []).filter((s) => s.exerciseName === exerciseName);
+  const chips = entries
+    .map((entry, i) => accessorySetChip(exerciseName, entry.setIndex ?? i, entry, lastAccessoryLog(sessionLogs, exerciseName, entry.setIndex ?? i)))
+    .join("");
+  return `
+    <div class="accessory-block">
+      <div class="accessory-name">
+        <span>${escapeHtml(exerciseName)} <span class="accessory-target">(added)</span></span>
+        <button class="btn btn-sm btn-ghost" data-action="remove-ad-hoc" data-exercise="${escapeHtml(exerciseName)}" aria-label="Remove exercise">Remove</button>
+      </div>
+      <div class="accessory-sets">${chips}</div>
+    </div>`;
+}
+
+function addExerciseControls(customExercises) {
+  const options = [...customExercises]
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("");
+  return `
+    <div class="section-label">Add exercise</div>
+    ${
+      customExercises.length
+        ? `<div class="field">
+            <select data-action="add-known-exercise">
+              <option value="">Choose from your list…</option>
+              ${options}
+            </select>
+          </div>`
+        : ""
+    }
+    <div style="display:flex;gap:8px;">
+      <input class="set-input" style="flex:1;" type="text" id="new-exercise-name" placeholder="New exercise name" />
+      <button class="btn" data-action="add-new-exercise">Add</button>
+    </div>
+  `;
+}
+
 const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
 
 let todayScreen = "splash"; // 'splash' | 'workout'
@@ -191,12 +231,18 @@ function renderWorkoutScreen(root, ctx) {
       <div class="set-meta">No main lift today.</div></div>`;
   }
 
+  const fixedNames = new Set(day.accessories.map((a) => a.name));
+  const extraNames = [...new Set((session.accessorySets || []).map((s) => s.exerciseName))].filter((n) => !fixedNames.has(n));
+
   html += `<div class="card">
     <h3>Accessories</h3>
     ${day.accessories.map((a) => accessoryBlock(a, session, state.sessionLogs)).join("")}
+    ${extraNames.map((name) => extraAccessoryBlock(name, session, state.sessionLogs)).join("")}
     <div class="btn-row">
       <button class="btn btn-sm" data-action="start-timer" data-seconds="${state.settings.restTimerIsolationSec}" data-label="Isolation rest">Rest ${Math.round(state.settings.restTimerIsolationSec / 60)}:${String(state.settings.restTimerIsolationSec % 60).padStart(2, "0")}</button>
     </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
+    ${addExerciseControls(state.customExercises || [])}
   </div>`;
 
   html += `<div class="card notes-field">
@@ -285,6 +331,17 @@ function wireActions(root, ctx) {
       actions.setAccessoryValue(el.dataset.exercise, Number(el.dataset.index), el.dataset.field, el.value === "" ? null : Number(el.value))
     )
   );
+  root.querySelectorAll('[data-action="remove-ad-hoc"]').forEach((el) =>
+    el.addEventListener("click", () => actions.removeAdHocExercise(el.dataset.exercise))
+  );
+
+  root.querySelector('[data-action="add-known-exercise"]')?.addEventListener("change", (e) => {
+    if (e.target.value) actions.addAdHocExercise(e.target.value);
+  });
+  root.querySelector('[data-action="add-new-exercise"]')?.addEventListener("click", () => {
+    const input = root.querySelector("#new-exercise-name");
+    if (input?.value.trim()) actions.addAdHocExercise(input.value);
+  });
 
   const notes = root.querySelector('[data-action="notes"]');
   if (notes) notes.addEventListener("change", () => actions.updateNotes(notes.value));

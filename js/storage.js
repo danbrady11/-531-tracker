@@ -25,6 +25,10 @@ function defaultState() {
     cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
     sessionLogs: [],
     bodyweightEntries: [],
+    // Exercise names the user has added ad hoc to a workout at least once,
+    // remembered so they can be picked from a dropdown next time instead of
+    // retyped. Separate from the fixed per-day accessory lists in program.js.
+    customExercises: [],
   };
 }
 
@@ -45,6 +49,7 @@ export function migrate(state) {
   }
   merged.sessionLogs = Array.isArray(state.sessionLogs) ? state.sessionLogs : [];
   merged.bodyweightEntries = Array.isArray(state.bodyweightEntries) ? state.bodyweightEntries : [];
+  merged.customExercises = Array.isArray(state.customExercises) ? state.customExercises : [];
   return merged;
 }
 
