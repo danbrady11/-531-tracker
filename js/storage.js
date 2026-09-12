@@ -32,6 +32,22 @@ function defaultState() {
   };
 }
 
+// One-time renames for accessory exercises that got relabeled in the program.
+// Keeps prefill working off old logged history under the new name instead of
+// starting that exercise's history over from nothing. Safe to run repeatedly
+// (a no-op once nothing matches the old names anymore).
+const ACCESSORY_RENAMES = {
+  "Rear delt": "Reverse pec deck / cable reverse fly",
+  "Face pulls": "Face pulls (optional)",
+};
+
+function renameAccessoryEntries(accessorySets) {
+  if (!Array.isArray(accessorySets)) return accessorySets;
+  return accessorySets.map((s) =>
+    ACCESSORY_RENAMES[s.exerciseName] ? { ...s, exerciseName: ACCESSORY_RENAMES[s.exerciseName] } : s
+  );
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -47,9 +63,17 @@ export function migrate(state) {
   for (const lift of LIFTS) {
     merged.trainingMaxes[lift] = { ...base.trainingMaxes[lift], ...(state.trainingMaxes?.[lift] || {}) };
   }
-  merged.sessionLogs = Array.isArray(state.sessionLogs) ? state.sessionLogs : [];
+  merged.sessionLogs = (Array.isArray(state.sessionLogs) ? state.sessionLogs : []).map((log) => ({
+    ...log,
+    accessorySets: renameAccessoryEntries(log.accessorySets),
+  }));
   merged.bodyweightEntries = Array.isArray(state.bodyweightEntries) ? state.bodyweightEntries : [];
-  merged.customExercises = Array.isArray(state.customExercises) ? state.customExercises : [];
+  merged.customExercises = [
+    ...new Set((Array.isArray(state.customExercises) ? state.customExercises : []).map((n) => ACCESSORY_RENAMES[n] || n)),
+  ];
+  if (merged.currentSession?.accessorySets) {
+    merged.currentSession = { ...merged.currentSession, accessorySets: renameAccessoryEntries(merged.currentSession.accessorySets) };
+  }
   return merged;
 }
 
