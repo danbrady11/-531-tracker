@@ -105,7 +105,57 @@ function accessoryBlock(accessory, session, sessionLogs) {
     </div>`;
 }
 
+const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
+
+let todayScreen = "splash"; // 'splash' | 'workout'
+
 export function renderToday(root, ctx) {
+  if (todayScreen === "workout") {
+    renderWorkoutScreen(root, ctx);
+  } else {
+    renderSplashScreen(root, ctx);
+  }
+}
+
+function renderSplashScreen(root, ctx) {
+  const { state } = ctx;
+  const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
+  const day = dayInfo(dayIndex);
+
+  const otherDaysHtml = Array.from({ length: DAY_COUNT }, (_, i) => i + 1)
+    .filter((i) => i !== dayIndex)
+    .map((i) => {
+      const d = dayInfo(i);
+      return `<button class="splash-day-row" data-action="start-day" data-day="${i}">
+        <span class="splash-day-num">${i}</span>
+        <span class="splash-day-name">${escapeHtml(d.name)}</span>
+        <span class="splash-day-arrow" aria-hidden="true">›</span>
+      </button>`;
+    })
+    .join("");
+
+  root.innerHTML = `
+    <div class="card splash-hero">
+      <div class="splash-kicker">Up next · Cycle ${cycleNumber} · Week ${weekIndex} of 4</div>
+      <h2 class="splash-title">${escapeHtml(day.name)}</h2>
+      <div class="set-meta">${DAY_KIND_LABEL[day.kind]}</div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
+    </div>
+    <div class="section-label">Or pick a different day</div>
+    <div class="card splash-other-days">${otherDaysHtml}</div>
+  `;
+
+  root.querySelectorAll('[data-action="start-day"]').forEach((el) =>
+    el.addEventListener("click", () => {
+      const day = Number(el.dataset.day);
+      if (day !== state.cycleState.dayIndex) ctx.actions.chooseDay(day);
+      todayScreen = "workout";
+      renderToday(root, ctx);
+    })
+  );
+}
+
+function renderWorkoutScreen(root, ctx) {
   const { state } = ctx;
   const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
   const day = dayInfo(dayIndex);
@@ -113,17 +163,7 @@ export function renderToday(root, ctx) {
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
 
-  let html = `<div class="day-picker">
-    ${Array.from({ length: DAY_COUNT }, (_, i) => i + 1)
-      .map((i) => {
-        const d = dayInfo(i);
-        return `<button class="day-pill ${i === dayIndex ? "active" : ""}" data-action="choose-day" data-day="${i}">
-          <span class="day-pill-num">${i}</span>
-          <span class="day-pill-name">${escapeHtml(d.name)}</span>
-        </button>`;
-      })
-      .join("")}
-  </div>`;
+  let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;
   html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of 4 · Day ${dayIndex} of 6</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
@@ -193,15 +233,16 @@ export function renderToday(root, ctx) {
     });
   }
 
+  root.querySelector('[data-action="back-to-splash"]')?.addEventListener("click", () => {
+    todayScreen = "splash";
+    renderToday(root, ctx);
+  });
+
   wireActions(root, ctx);
 }
 
 function wireActions(root, ctx) {
   const { actions } = ctx;
-
-  root.querySelectorAll('[data-action="choose-day"]').forEach((el) =>
-    el.addEventListener("click", () => actions.chooseDay(Number(el.dataset.day)))
-  );
 
   root.querySelectorAll('[data-action="toggle-main"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleMainSet(Number(el.dataset.index)))
@@ -252,6 +293,12 @@ function wireActions(root, ctx) {
     el.addEventListener("click", () => actions.startTimer(Number(el.dataset.seconds), el.dataset.label))
   );
 
-  root.querySelector('[data-action="complete-day"]')?.addEventListener("click", () => actions.completeDay());
-  root.querySelector('[data-action="skip-day"]')?.addEventListener("click", () => actions.skipDay());
+  root.querySelector('[data-action="complete-day"]')?.addEventListener("click", () => {
+    todayScreen = "splash";
+    actions.completeDay();
+  });
+  root.querySelector('[data-action="skip-day"]')?.addEventListener("click", () => {
+    todayScreen = "splash";
+    actions.skipDay();
+  });
 }

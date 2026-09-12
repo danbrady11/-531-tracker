@@ -469,46 +469,68 @@ button, input, select, textarea {
   display: inline-block;
 }
 
-.day-picker {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 14px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.day-picker::-webkit-scrollbar { display: none; }
-
-.day-pill {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 68px;
-  min-height: 56px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  font-size: 0.72rem;
+.splash-hero {
   text-align: center;
+  padding: 28px 20px;
 }
 
-.day-pill-num {
-  font-size: 0.95rem;
-  font-weight: 700;
+.splash-kicker {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.splash-title {
+  margin: 0 0 4px;
+  font-size: 2rem;
+}
+
+.splash-other-days {
+  padding: 4px 16px;
+}
+
+.splash-day-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
   color: var(--text);
+  font-size: 0.95rem;
+  text-align: left;
+}
+.splash-other-days .splash-day-row:last-child {
+  border-bottom: none;
 }
 
-.day-pill.active {
-  background: var(--accent);
-  border-color: var(--accent);
+.splash-day-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
-.day-pill.active .day-pill-num,
-.day-pill.active .day-pill-name {
-  color: var(--accent-text);
+
+.splash-day-name {
+  flex: 1;
+}
+
+.splash-day-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
 }
 
 .cal-header {
