@@ -1,4 +1,5 @@
 import { LIFTS } from "../calc.js";
+import { effectiveWeekCount } from "../state.js";
 
 const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
 
@@ -35,11 +36,22 @@ export function renderSettings(root, ctx) {
           <input class="set-input" style="width:100%" type="number" min="1" max="4" value="${state.cycleState.weekIndex}" data-action="edit-week" />
         </div>
       </div>
-      <div class="set-meta">Cycle number: ${state.cycleState.cycleNumber}</div>
+      <div class="set-meta">Cycle number: ${state.cycleState.cycleNumber} · ${
+        effectiveWeekCount(state.cycleState.cycleNumber, s) === 4
+          ? "this cycle ends with a deload (week 4)"
+          : "this cycle skips deload — ends after week 3"
+      }</div>
     </div>
 
     <div class="card">
       <h3>Program settings</h3>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:10px;flex-direction:row;">
+          <input type="checkbox" style="width:20px;height:20px;" ${s.deloadEveryOtherCycle ? "checked" : ""} data-action="setting-checkbox" data-key="deloadEveryOtherCycle" />
+          Deload every other cycle only
+        </label>
+        <div class="set-meta">Odd cycles (1, 3, 5…) get the week-4 deload; even cycles end after week 3.</div>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>Bar weight (lb)</label>
@@ -119,6 +131,9 @@ export function renderSettings(root, ctx) {
   );
   root.querySelectorAll('[data-action="setting-tm-inc"]').forEach((el) =>
     el.addEventListener("change", () => ctx.actions.setTmIncrement(el.dataset.lift, Number(el.value)))
+  );
+  root.querySelectorAll('[data-action="setting-checkbox"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, el.checked))
   );
 
   root.querySelector('[data-action="export-json"]')?.addEventListener("click", () => ctx.actions.exportJSON());

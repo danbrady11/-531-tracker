@@ -12,6 +12,9 @@ function defaultState() {
       restTimerMainSec: 210,
       restTimerIsolationSec: 90,
       theme: "system", // 'system' | 'light' | 'dark'
+      // When true, only odd-numbered cycles (1, 3, 5, ...) run a week-4 deload;
+      // even-numbered cycles end after week 3 and roll straight into the next cycle.
+      deloadEveryOtherCycle: false,
     },
     trainingMaxes: {
       squat: { currentValue: 135, updatedAt: null },

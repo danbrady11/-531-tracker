@@ -187,7 +187,7 @@ function renderSessionDetail(log) {
 function finishDay(completed) {
   const session = { ...state.currentSession, completed, date: new Date().toISOString() };
   state.sessionLogs.push(session);
-  const { cycleState, cycleCompleted } = advanceCycle(state.cycleState);
+  const { cycleState, cycleCompleted } = advanceCycle(state.cycleState, state.settings);
   state.cycleState = cycleState;
   state.currentSession = null;
   persist();
