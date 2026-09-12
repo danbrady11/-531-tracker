@@ -3,8 +3,15 @@ import { effectiveWeekCount } from "../state.js";
 
 const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
 
+function syncStatusLabel(sync) {
+  if (sync.state === "syncing") return "Syncing…";
+  if (sync.state === "error") return sync.message || "Sync error";
+  if (sync.state === "synced") return sync.message || "Synced";
+  return "Not yet synced";
+}
+
 export function renderSettings(root, ctx) {
-  const { state } = ctx;
+  const { state, sync } = ctx;
   const s = state.settings;
 
   const tmTiles = LIFTS.map((lift) => {
@@ -100,6 +107,38 @@ export function renderSettings(root, ctx) {
     </div>
 
     <div class="card">
+      <h3>Cloud Sync</h3>
+      ${
+        sync.code
+          ? `
+        <div class="set-meta" style="margin-bottom:8px;">Sync code</div>
+        <div style="font-size:1.3rem;font-weight:700;letter-spacing:0.08em;margin-bottom:10px;">${sync.code}</div>
+        <div class="sync-status sync-status-${sync.state}">${syncStatusLabel(sync)}</div>
+        <div class="btn-row">
+          <button class="btn btn-sm" data-action="sync-force-push">Push to cloud</button>
+          <button class="btn btn-sm" data-action="sync-force-pull">Pull from cloud</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-danger" data-action="sync-unlink">Unlink this device</button>
+        </div>
+      `
+          : `
+        <p class="set-meta">Link this device to keep training data in sync with another device (e.g. phone + desktop) automatically.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" data-action="sync-generate">Generate new code (this is your main device)</button>
+        </div>
+        <div class="field" style="margin-top:14px;">
+          <label>Or enter a code from another device</label>
+          <div style="display:flex;gap:8px;">
+            <input class="set-input" style="flex:1;text-transform:uppercase;" id="sync-code-input" placeholder="ABC123" maxlength="8" />
+            <button class="btn" data-action="sync-link">Link</button>
+          </div>
+        </div>
+      `
+      }
+    </div>
+
+    <div class="card">
       <h3>Data</h3>
       <div class="btn-row">
         <button class="btn btn-block" data-action="export-json">Export JSON</button>
@@ -135,6 +174,15 @@ export function renderSettings(root, ctx) {
   root.querySelectorAll('[data-action="setting-checkbox"]').forEach((el) =>
     el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, el.checked))
   );
+
+  root.querySelector('[data-action="sync-generate"]')?.addEventListener("click", () => ctx.actions.generateAndLinkSyncCode());
+  root.querySelector('[data-action="sync-link"]')?.addEventListener("click", () => {
+    const val = root.querySelector("#sync-code-input")?.value || "";
+    ctx.actions.linkSyncCode(val);
+  });
+  root.querySelector('[data-action="sync-unlink"]')?.addEventListener("click", () => ctx.actions.unlinkSync());
+  root.querySelector('[data-action="sync-force-push"]')?.addEventListener("click", () => ctx.actions.forcePushToCloud());
+  root.querySelector('[data-action="sync-force-pull"]')?.addEventListener("click", () => ctx.actions.forcePullFromCloud());
 
   root.querySelector('[data-action="export-json"]')?.addEventListener("click", () => ctx.actions.exportJSON());
   root.querySelector('[data-action="import-json"]')?.addEventListener("change", (e) => {

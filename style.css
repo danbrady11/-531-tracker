@@ -631,6 +631,20 @@ button, input, select, textarea {
 .session-detail-check.yes { color: var(--success); }
 .session-detail-check.no { color: var(--danger); }
 
+.sync-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.sync-status-syncing { color: var(--accent); }
+.sync-status-synced { color: var(--success); }
+.sync-status-error { color: var(--danger); background: var(--danger-bg); border-color: var(--danger); }
+
 canvas.chart-canvas {
   display: block;
   max-width: 100%;

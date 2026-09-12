@@ -1,4 +1,4 @@
-import { loadState, saveState, exportStateJSON, importStateJSON } from "./storage.js";
+import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate } from "./state.js";
 import { dayInfo, DAY_COUNT } from "./program.js";
@@ -7,6 +7,14 @@ import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
 import { renderCalendar } from "./views/calendar.js";
 import { startRestTimer, cancelRestTimer, subscribeRestTimer, formatMs } from "./timer.js";
+import {
+  getSyncCode,
+  setSyncCodeLocally,
+  generateSyncCode,
+  pushToCloud,
+  pullFromCloud,
+  watchCloud,
+} from "./sync.js";
 
 let state = loadState();
 let currentView = "today";
@@ -15,8 +23,73 @@ const viewRoot = document.getElementById("view-root");
 const cycleBadge = document.getElementById("cycle-badge");
 const modalRoot = document.getElementById("modal-root");
 
+// --- Cloud sync bookkeeping ---
+// Last-write-wins by timestamp. `localUpdatedAt` is bumped on every local
+// change; `lastKnownRemoteUpdatedAt` tracks what we last pushed or adopted,
+// so an incoming update that merely echoes our own push is a no-op.
+let localUpdatedAt = 0;
+let lastKnownRemoteUpdatedAt = 0;
+let cloudPushTimer = null;
+let unwatchCloud = null;
+let syncStatus = { state: "idle", message: "" }; // idle | syncing | synced | error
+
+function setSyncStatus(s, message = "") {
+  syncStatus = { state: s, message };
+  if (currentView === "settings") renderCurrentView();
+}
+
+function scheduleCloudPush() {
+  const code = getSyncCode();
+  if (!code) return;
+  localUpdatedAt = Date.now();
+  if (cloudPushTimer) clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    const at = localUpdatedAt;
+    lastKnownRemoteUpdatedAt = at;
+    setSyncStatus("syncing");
+    try {
+      await pushToCloud(code, state, at);
+      setSyncStatus("synced");
+    } catch (err) {
+      console.error("Cloud push failed", err);
+      setSyncStatus("error", "Couldn't reach the cloud. Will retry on the next change.");
+    }
+  }, 800);
+}
+
+function startWatchingCloud(code) {
+  unwatchCloud?.();
+  setSyncStatus("syncing");
+  unwatchCloud = watchCloud(
+    code,
+    (payload) => {
+      if (!payload || typeof payload.updatedAt !== "number") return;
+      if (payload.updatedAt > lastKnownRemoteUpdatedAt) {
+        lastKnownRemoteUpdatedAt = payload.updatedAt;
+        localUpdatedAt = payload.updatedAt;
+        state = migrate(payload.state);
+        saveState(state);
+        setSyncStatus("synced", "Synced from your other device");
+        renderCurrentView();
+      } else {
+        setSyncStatus("synced");
+      }
+    },
+    (err) => {
+      console.error("Cloud watch failed", err);
+      setSyncStatus("error", "Sync connection failed.");
+    }
+  );
+}
+
+function initCloudSync() {
+  const code = getSyncCode();
+  if (code) startWatchingCloud(code);
+}
+
 function persist() {
   saveState(state);
+  scheduleCloudPush();
 }
 
 function buildSessionForCurrentCycle() {
@@ -67,15 +140,17 @@ function renderCurrentView() {
   updateCycleBadge();
   document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === currentView));
 
+  const ctx = { state, actions, sync: { code: getSyncCode(), ...syncStatus } };
+
   if (currentView === "today") {
     ensureCurrentSession();
-    renderToday(viewRoot, { state, actions });
+    renderToday(viewRoot, ctx);
   } else if (currentView === "history") {
-    renderHistory(viewRoot, { state, actions });
+    renderHistory(viewRoot, ctx);
   } else if (currentView === "calendar") {
-    renderCalendar(viewRoot, { state, actions });
+    renderCalendar(viewRoot, ctx);
   } else if (currentView === "settings") {
-    renderSettings(viewRoot, { state, actions });
+    renderSettings(viewRoot, ctx);
   }
 }
 
@@ -338,6 +413,77 @@ const actions = {
       showToast("Import failed: invalid file");
     }
   },
+  // This device becomes the source of truth for a brand-new sync code: it
+  // seeds the cloud with this device's current data.
+  async generateAndLinkSyncCode() {
+    const code = generateSyncCode();
+    setSyncCodeLocally(code);
+    localUpdatedAt = Date.now();
+    lastKnownRemoteUpdatedAt = localUpdatedAt;
+    setSyncStatus("syncing");
+    try {
+      await pushToCloud(code, state, localUpdatedAt);
+      startWatchingCloud(code);
+      showToast(`Sync code ${code} created`);
+    } catch (err) {
+      console.error(err);
+      setSyncStatus("error", "Couldn't reach the cloud to create a sync code.");
+    }
+    renderCurrentView();
+  },
+  // Joining an EXISTING code (a second device): never push first, or this
+  // device's un-synced local data would clobber the shared copy. Just start
+  // watching — whatever's already in the cloud gets adopted immediately.
+  linkSyncCode(code) {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) return;
+    setSyncCodeLocally(trimmed);
+    startWatchingCloud(trimmed);
+    renderCurrentView();
+  },
+  unlinkSync() {
+    unwatchCloud?.();
+    unwatchCloud = null;
+    setSyncCodeLocally(null);
+    setSyncStatus("idle");
+    renderCurrentView();
+  },
+  async forcePushToCloud() {
+    const code = getSyncCode();
+    if (!code) return;
+    localUpdatedAt = Date.now();
+    lastKnownRemoteUpdatedAt = localUpdatedAt;
+    setSyncStatus("syncing");
+    try {
+      await pushToCloud(code, state, localUpdatedAt);
+      setSyncStatus("synced", "Pushed this device's data to the cloud");
+    } catch (err) {
+      console.error(err);
+      setSyncStatus("error", "Push failed.");
+    }
+    renderCurrentView();
+  },
+  async forcePullFromCloud() {
+    const code = getSyncCode();
+    if (!code) return;
+    setSyncStatus("syncing");
+    try {
+      const payload = await pullFromCloud(code);
+      if (payload) {
+        lastKnownRemoteUpdatedAt = payload.updatedAt;
+        localUpdatedAt = payload.updatedAt;
+        state = migrate(payload.state);
+        saveState(state);
+        setSyncStatus("synced", "Pulled the cloud's data onto this device");
+      } else {
+        setSyncStatus("error", "No data found for that sync code.");
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncStatus("error", "Pull failed.");
+    }
+    renderCurrentView();
+  },
 };
 
 document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -365,3 +511,4 @@ subscribeRestTimer(({ remainingMs, label }) => {
 
 applyTheme();
 renderCurrentView();
+initCloudSync();

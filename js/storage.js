@@ -28,7 +28,7 @@ function defaultState() {
   };
 }
 
-function migrate(state) {
+export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
   // fill in without wiping existing user data.

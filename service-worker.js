@@ -1,4 +1,4 @@
-const CACHE_NAME = "531-tracker-v4";
+const CACHE_NAME = "531-tracker-v5";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   "./js/storage.js",
   "./js/timer.js",
   "./js/chart.js",
+  "./js/sync.js",
   "./js/lift-meta.js",
   "./js/views/today.js",
   "./js/views/settings.js",
