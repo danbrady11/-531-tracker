@@ -38,6 +38,11 @@ function setSyncStatus(s, message = "") {
   if (currentView === "settings") renderCurrentView();
 }
 
+/** Firebase errors carry a short .code (e.g. "PERMISSION_DENIED"); fall back to .message or the raw value. */
+function errorDetail(err) {
+  return err?.code || err?.message || String(err);
+}
+
 function scheduleCloudPush() {
   const code = getSyncCode();
   if (!code) return;
@@ -52,7 +57,7 @@ function scheduleCloudPush() {
       setSyncStatus("synced");
     } catch (err) {
       console.error("Cloud push failed", err);
-      setSyncStatus("error", "Couldn't reach the cloud. Will retry on the next change.");
+      setSyncStatus("error", `Couldn't reach the cloud (${errorDetail(err)}). Will retry on the next change.`);
     }
   }, 800);
 }
@@ -93,7 +98,7 @@ function promptSyncConflict(payload) {
           setSyncStatus("synced", "Kept this device's data and pushed it to the cloud");
         } catch (err) {
           console.error(err);
-          setSyncStatus("error", "Push failed.");
+          setSyncStatus("error", `Push failed: ${errorDetail(err)}`);
         }
       });
       root.querySelector("#conflict-use-cloud").addEventListener("click", () => {
@@ -128,7 +133,7 @@ function startWatchingCloud(code) {
     },
     (err) => {
       console.error("Cloud watch failed", err);
-      setSyncStatus("error", "Sync connection failed.");
+      setSyncStatus("error", `Sync connection failed: ${errorDetail(err)}`);
     }
   );
 }
@@ -150,7 +155,7 @@ async function doGenerateAndLinkSyncCode() {
     showToast(`Sync code ${code} created`);
   } catch (err) {
     console.error(err);
-    setSyncStatus("error", "Couldn't reach the cloud to create a sync code.");
+    setSyncStatus("error", `Couldn't reach the cloud to create a sync code: ${errorDetail(err)}`);
   }
   renderCurrentView();
 }
@@ -806,7 +811,7 @@ const actions = {
       setSyncStatus("synced", "Pushed this device's data to the cloud");
     } catch (err) {
       console.error(err);
-      setSyncStatus("error", "Push failed.");
+      setSyncStatus("error", `Push failed: ${errorDetail(err)}`);
     }
     renderCurrentView();
   },
@@ -829,7 +834,7 @@ const actions = {
       }
     } catch (err) {
       console.error(err);
-      setSyncStatus("error", "Pull failed.");
+      setSyncStatus("error", `Pull failed: ${errorDetail(err)}`);
     }
     renderCurrentView();
   },
