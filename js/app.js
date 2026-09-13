@@ -383,7 +383,14 @@ const actions = {
     persist();
   },
   toggleAccessorySet(exerciseName, setIndex) {
-    const entry = state.currentSession.accessorySets.find((s) => s.exerciseName === exerciseName && s.setIndex === setIndex);
+    // Defensive: an in-progress session built before an accessory's schema
+    // changed (e.g. a no-set-count item newly getting a checkbox entry)
+    // might not have this entry yet — create it rather than throwing.
+    let entry = state.currentSession.accessorySets.find((s) => s.exerciseName === exerciseName && s.setIndex === setIndex);
+    if (!entry) {
+      entry = { exerciseName, setIndex, weight: null, reps: null, completed: false };
+      state.currentSession.accessorySets.push(entry);
+    }
     entry.completed = !entry.completed;
     if (entry.completed) {
       const prefill = lastAccessoryLog(state.sessionLogs, exerciseName, setIndex);

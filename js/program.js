@@ -59,10 +59,7 @@ export const DAYS = {
     hasShoulderRehab: false,
     accessories: [
       { name: "Yoga", sets: null, repsLabel: "" },
-      { name: "Walk", sets: null, repsLabel: "" },
       { name: "Zone 2", sets: null, repsLabel: "30 min" },
-      { name: "Band pull-aparts (optional)", sets: 3, repsLabel: "20" },
-      { name: "Face pulls (optional)", sets: 3, repsLabel: "20" },
     ],
   },
   4: {

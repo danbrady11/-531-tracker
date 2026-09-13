@@ -225,10 +225,11 @@ export function newSessionLog({ dayIndex, weekIndex, cycleNumber }, mainSets, su
     completed: false,
     mainSets,
     supplementalSets,
-    // Activities with no set count (yoga, a walk, Zone 2) get no set entries —
-    // they're just checked off via their exercise name, not logged per set.
+    // Activities with no set count (yoga, Zone 2) still get exactly one
+    // entry, so there's a single checkbox to mark them done — just without
+    // the weight/reps fields a normal accessory's sets would carry.
     accessorySets: accessories.flatMap((a) =>
-      Array.from({ length: a.sets || 0 }, (_, setIndex) => ({
+      Array.from({ length: a.sets || 1 }, (_, setIndex) => ({
         exerciseName: a.name,
         setIndex,
         weight: null,

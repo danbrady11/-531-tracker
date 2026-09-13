@@ -90,7 +90,26 @@ function accessorySetChip(exerciseName, setIndex, entry, prefill) {
     </div>`;
 }
 
+/** No set count to log (Yoga, Zone 2) — a single checkbox, no weight/reps. */
+function checkableAccessoryRow(accessory, session) {
+  const entry = (session.accessorySets || []).find((s) => s.exerciseName === accessory.name && s.setIndex === 0) || { completed: false };
+  return `
+    <div class="accessory-block">
+      <div class="rehab-row" style="padding:0;border:none;">
+        <button class="set-check ${entry.completed ? "done" : ""}" data-action="toggle-accessory" data-exercise="${escapeHtml(accessory.name)}" data-index="0" aria-label="Mark done">
+          ${entry.completed ? "✓" : ""}
+        </button>
+        <div class="set-info">
+          <div class="rehab-name">${escapeHtml(accessory.name)}</div>
+          ${accessory.repsLabel ? `<div class="accessory-cue">${escapeHtml(accessory.repsLabel)}</div>` : ""}
+        </div>
+      </div>
+    </div>`;
+}
+
 function accessoryBlock(accessory, session, sessionLogs) {
+  if (accessory.sets == null) return checkableAccessoryRow(accessory, session);
+
   const entries = (session.accessorySets || []).filter((s) => s.exerciseName === accessory.name);
   const chips = entries
     .map((entry, i) => accessorySetChip(accessory.name, entry.setIndex ?? i, entry, lastAccessoryLog(sessionLogs, accessory.name, entry.setIndex ?? i)))
@@ -99,10 +118,10 @@ function accessoryBlock(accessory, session, sessionLogs) {
     <div class="accessory-block">
       <div class="accessory-name">
         <span>${escapeHtml(accessory.name)}</span>
-        <span class="accessory-target">${accessory.sets ? `${accessory.sets}×${accessory.repsLabel}` : accessory.repsLabel}</span>
+        <span class="accessory-target">${accessory.sets}×${accessory.repsLabel}</span>
       </div>
       ${accessory.cue ? `<div class="accessory-cue">${escapeHtml(accessory.cue)}</div>` : ""}
-      ${entries.length ? `<div class="accessory-sets">${chips}</div>` : `<div class="set-meta">Log when done — no set count tracked.</div>`}
+      <div class="accessory-sets">${chips}</div>
     </div>`;
 }
 

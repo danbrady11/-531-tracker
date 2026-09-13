@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, accessoryHistory, rehabAdherence } from "./state.js";
+import { advanceCycle, effectiveWeekCount, accessoryHistory, rehabAdherence, newSessionLog } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -112,4 +112,27 @@ test("rehabAdherence: counts only sessions that actually had each block, indepen
   assert.equal(result.psoasDone, 1); // only the fully-checked one counts, even though its lift was skipped
   assert.equal(result.shoulderTotal, 2);
   assert.equal(result.shoulderDone, 1);
+});
+
+test("newSessionLog: a no-set-count accessory (Yoga, Zone 2) still gets exactly one checkable entry", () => {
+  const session = newSessionLog(
+    { dayIndex: 3, weekIndex: 1, cycleNumber: 1 },
+    [], [],
+    [{ name: "Yoga", sets: null, repsLabel: "" }, { name: "Zone 2", sets: null, repsLabel: "30 min" }]
+  );
+  const yoga = session.accessorySets.filter((s) => s.exerciseName === "Yoga");
+  const zone2 = session.accessorySets.filter((s) => s.exerciseName === "Zone 2");
+  assert.equal(yoga.length, 1);
+  assert.equal(yoga[0].setIndex, 0);
+  assert.equal(yoga[0].completed, false);
+  assert.equal(zone2.length, 1);
+});
+
+test("newSessionLog: a normal accessory still gets one entry per set", () => {
+  const session = newSessionLog(
+    { dayIndex: 2, weekIndex: 1, cycleNumber: 1 },
+    [], [],
+    [{ name: "Curls", sets: 3, repsLabel: "12" }]
+  );
+  assert.equal(session.accessorySets.filter((s) => s.exerciseName === "Curls").length, 3);
 });
