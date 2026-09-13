@@ -15,6 +15,7 @@
   --amrap-bg: #f3e8ff;
   --rehab: #0d9488;
   --rehab-bg: #ccfbf1;
+  --indigo: #4f46e5;
   --input-bg: #ffffff;
   --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
   --radius: 14px;
@@ -39,6 +40,7 @@
     --amrap-bg: #2c1a45;
     --rehab: #2dd4bf;
     --rehab-bg: #0f3d38;
+    --indigo: #818cf8;
     --input-bg: #0f1826;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   }
@@ -61,6 +63,7 @@
   --amrap-bg: #2c1a45;
   --rehab: #2dd4bf;
   --rehab-bg: #0f3d38;
+  --indigo: #818cf8;
   --input-bg: #0f1826;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 }

@@ -7,8 +7,10 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-const CARDIO_EXERCISE_NAMES = ["Yoga", "Zone 2"];
-const CARDIO_COLOR_VAR = "--rehab";
+const CARDIO_META = {
+  Yoga: { label: "Yoga", colorVar: "--rehab" },
+  "Zone 2": { label: "Zone 2 Cardio", colorVar: "--indigo" },
+};
 
 // Module-local view state: which month is currently displayed. Resets to the
 // real-world current month isn't necessary across renders since we keep it here.
@@ -32,10 +34,16 @@ function isMainOrAccessoryLog(log) {
   return kind === "main" || kind === "accessory";
 }
 
-function hasCardioLog(log) {
-  return (log.accessorySets || []).some(
-    (s) => CARDIO_EXERCISE_NAMES.includes(s.exerciseName) && s.completed
-  );
+// Distinct cardio exercises completed across a date's logs (a single
+// Recovery-day session can have both Yoga and Zone 2 checked off).
+function cardioNamesForLogs(logs) {
+  const names = new Set();
+  for (const log of logs) {
+    for (const s of log.accessorySets || []) {
+      if (CARDIO_META[s.exerciseName] && s.completed) names.add(s.exerciseName);
+    }
+  }
+  return names;
 }
 
 function buildCells(year, month) {
@@ -57,19 +65,22 @@ function buildCells(year, month) {
   return cells;
 }
 
-function renderGrid(cells, todayKey, logsForCell, colorForLog) {
+// cellInfoForKey(key) -> { count, colorVar }, where colorVar is only
+// meaningful when count === 1 (count > 1 always renders a muted dot,
+// since a single dot can't represent more than one distinct color).
+function renderGrid(cells, todayKey, cellInfoForKey) {
   return cells
     .map((c) => {
       if (c.muted) return `<div class="cal-cell muted"><span>${c.day}</span></div>`;
-      const logs = logsForCell(c.key);
+      const { count, colorVar } = cellInfoForKey(c.key);
       const isToday = c.key === todayKey;
       let dotHtml = "";
-      if (logs.length === 1) {
-        dotHtml = `<span class="cal-dot" style="background:var(${colorForLog(logs[0])})"></span>`;
-      } else if (logs.length > 1) {
+      if (count === 1) {
+        dotHtml = `<span class="cal-dot" style="background:var(${colorVar})"></span>`;
+      } else if (count > 1) {
         dotHtml = `<span class="cal-dot" style="background:var(--text-muted)"></span>`;
       }
-      return `<button class="cal-cell ${logs.length ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
+      return `<button class="cal-cell ${count ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
         <span>${c.day}</span>
         ${dotHtml}
       </button>`;
@@ -84,8 +95,14 @@ export function renderCalendar(root, ctx) {
   const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   const cells = buildCells(viewYear, viewMonth);
-  const mainLogsForCell = (key) => (byDate.get(key) || []).filter(isMainOrAccessoryLog);
-  const cardioLogsForCell = (key) => (byDate.get(key) || []).filter(hasCardioLog);
+  const mainCellInfo = (key) => {
+    const logs = (byDate.get(key) || []).filter(isMainOrAccessoryLog);
+    return { count: logs.length, colorVar: logs.length === 1 ? colorVarForLog(logs[0]) : null };
+  };
+  const cardioCellInfo = (key) => {
+    const names = [...cardioNamesForLogs(byDate.get(key) || [])];
+    return { count: names.length, colorVar: names.length === 1 ? CARDIO_META[names[0]].colorVar : null };
+  };
 
   root.innerHTML = `
     <div class="card">
@@ -95,7 +112,7 @@ export function renderCalendar(root, ctx) {
         <button class="btn btn-sm btn-ghost" id="cal-next" aria-label="Next month">›</button>
       </div>
       <div class="cal-weekdays">${WEEKDAY_LABELS.map((w) => `<div>${w}</div>`).join("")}</div>
-      <div class="cal-grid">${renderGrid(cells, todayKey, mainLogsForCell, colorVarForLog)}</div>
+      <div class="cal-grid">${renderGrid(cells, todayKey, mainCellInfo)}</div>
       <div class="cal-legend">
         ${[...Object.values(LIFT_META), NON_LIFT_DAY_META.accessory]
           .map((meta) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
@@ -106,9 +123,11 @@ export function renderCalendar(root, ctx) {
     <div class="card">
       <h3 style="margin:0 0 10px;">Yoga / Zone 2 Cardio</h3>
       <div class="cal-weekdays">${WEEKDAY_LABELS.map((w) => `<div>${w}</div>`).join("")}</div>
-      <div class="cal-grid">${renderGrid(cells, todayKey, cardioLogsForCell, () => CARDIO_COLOR_VAR)}</div>
+      <div class="cal-grid">${renderGrid(cells, todayKey, cardioCellInfo)}</div>
       <div class="cal-legend">
-        <span class="legend-item"><span class="legend-swatch" style="background:var(${CARDIO_COLOR_VAR})"></span>Yoga / Zone 2</span>
+        ${Object.values(CARDIO_META)
+          .map((meta) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
+          .join("")}
       </div>
     </div>
   `;
