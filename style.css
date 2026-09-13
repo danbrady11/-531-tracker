@@ -77,11 +77,18 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px));
   -webkit-tap-highlight-color: transparent;
+  /* Weight/reps fields get double-tapped (to select-all and overwrite a
+     prefilled value) more than any other field in the app — iOS Safari's
+     native double-tap-to-zoom gesture fires on that, independent of any
+     font-size fix for focus-zoom. Disabling it app-wide is safe since
+     nothing here relies on double-tap for anything else. */
+  touch-action: manipulation;
 }
 
 button, input, select, textarea {
   font-family: inherit;
   color: inherit;
+  touch-action: manipulation;
 }
 
 /* iOS Safari auto-zooms the page on focusing any form control whose font-size
