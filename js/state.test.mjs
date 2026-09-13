@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, accessoryHistory, rehabAdherence, newSessionLog } from "./state.js";
+import { advanceCycle, effectiveWeekCount, accessoryHistory, rehabAdherence, newSessionLog, deriveCycleStateFromHistory } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -135,4 +135,35 @@ test("newSessionLog: a normal accessory still gets one entry per set", () => {
     [{ name: "Curls", sets: 3, repsLabel: "12" }]
   );
   assert.equal(session.accessorySets.filter((s) => s.exerciseName === "Curls").length, 3);
+});
+
+function logAt(dayIndex, weekIndex, cycleNumber, date, completed) {
+  return { id: `${date}-${dayIndex}`, date, dayIndex, weekIndex, cycleNumber, lift: null, completed, mainSets: [], supplementalSets: [], accessorySets: [], notes: "" };
+}
+
+test("deriveCycleStateFromHistory: no completed sessions falls back to day 1/week 1/cycle 1", () => {
+  assert.deepEqual(deriveCycleStateFromHistory([], deloadEveryCycle), { dayIndex: 1, weekIndex: 1, cycleNumber: 1 });
+  assert.deepEqual(deriveCycleStateFromHistory([logAt(3, 1, 1, "2026-01-01", false)], deloadEveryCycle), { dayIndex: 1, weekIndex: 1, cycleNumber: 1 });
+});
+
+test("deriveCycleStateFromHistory: one step past the most recent completed session, ignoring skips", () => {
+  const logs = [
+    logAt(4, 2, 1, "2026-01-01T00:00:00Z", true),
+    logAt(5, 2, 1, "2026-01-02T00:00:00Z", false), // skipped — must not count
+    logAt(6, 2, 1, "2026-01-03T00:00:00Z", true), // most recent completed
+  ];
+  assert.deepEqual(deriveCycleStateFromHistory(logs, deloadEveryCycle), { dayIndex: 1, weekIndex: 3, cycleNumber: 1 });
+});
+
+test("deriveCycleStateFromHistory: picks the most recent by date, not array order", () => {
+  const logs = [
+    logAt(2, 1, 1, "2026-01-10T00:00:00Z", true), // later date, earlier in array
+    logAt(1, 1, 1, "2026-01-05T00:00:00Z", true),
+  ];
+  assert.deepEqual(deriveCycleStateFromHistory(logs, deloadEveryCycle), { dayIndex: 3, weekIndex: 1, cycleNumber: 1 });
+});
+
+test("deriveCycleStateFromHistory: completing day 6 of the last week of an odd cycle rolls into the next cycle (deload-even-only)", () => {
+  const logs = [logAt(6, 3, 1, "2026-01-01T00:00:00Z", true)];
+  assert.deepEqual(deriveCycleStateFromHistory(logs, deloadEvenOnly), { dayIndex: 1, weekIndex: 1, cycleNumber: 2 });
 });

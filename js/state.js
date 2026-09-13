@@ -31,6 +31,25 @@ export function advanceCycle(cycleState, settings) {
   return { cycleState: { dayIndex, weekIndex, cycleNumber }, cycleCompleted };
 }
 
+/**
+ * Recompute the "recommended next" cycle position purely from logged
+ * history: one step past whichever completed session is most recent by
+ * date. Ignores skipped sessions entirely (they never move the pointer) and
+ * ignores state.cycleState itself, so it can't inherit drift from a stale
+ * or manually-edited pointer — a way to resync to ground truth on demand.
+ * Falls back to day 1/week 1/cycle 1 if nothing has ever been completed.
+ */
+export function deriveCycleStateFromHistory(sessionLogs, settings) {
+  const completed = sessionLogs.filter((log) => log.completed);
+  if (completed.length === 0) return { dayIndex: 1, weekIndex: 1, cycleNumber: 1 };
+  const last = completed.reduce((a, b) => (new Date(b.date) > new Date(a.date) ? b : a));
+  const { cycleState } = advanceCycle(
+    { dayIndex: last.dayIndex, weekIndex: last.weekIndex, cycleNumber: last.cycleNumber ?? 1 },
+    settings
+  );
+  return cycleState;
+}
+
 /** Apply the standard TM progression (deadlift/squat +10, bench/press +5 by default) to all lifts. */
 export function progressTrainingMaxes(trainingMaxes, tmIncrements, now = new Date().toISOString()) {
   const next = {};

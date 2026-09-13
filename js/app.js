@@ -1,6 +1,6 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate } from "./state.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory } from "./state.js";
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH } from "./program.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
@@ -160,8 +160,12 @@ function persist() {
   scheduleCloudPush();
 }
 
-function buildSessionForCurrentCycle() {
-  const { dayIndex, weekIndex } = state.cycleState;
+// Builds a fresh, unlogged session for an arbitrary cycle position — not
+// necessarily state.cycleState. Choosing a day from the splash screen builds
+// one for the chosen day without touching the persisted pointer; only an
+// actual completion advances that pointer (see finishDay).
+function buildSessionForPosition(position) {
+  const { dayIndex, weekIndex } = position;
   const day = dayInfo(dayIndex);
   const roundingIncrement = state.settings.roundingIncrement;
 
@@ -179,7 +183,7 @@ function buildSessionForCurrentCycle() {
   }
 
   const accessoriesForSession = [...day.accessories, ...(day.hasPsoasStrength ? PSOAS_STRENGTH : [])];
-  const session = newSessionLog(state.cycleState, mainSets, supplementalSets, accessoriesForSession);
+  const session = newSessionLog(position, mainSets, supplementalSets, accessoriesForSession);
   session.accessorySets = session.accessorySets.map((entry) => {
     const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
     return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
@@ -194,11 +198,15 @@ function buildSessionForCurrentCycle() {
   return session;
 }
 
+// Only builds when there's no session at all (first load, or right after
+// finishDay/a manual cycle-position edit clears it). Does NOT rebuild just
+// because the session's position differs from state.cycleState — that
+// divergence is exactly what chooseDay creates on purpose when you start a
+// day other than the recommended one, and it must survive re-renders (e.g.
+// toggling a set) until you actually finish that day.
 function ensureCurrentSession() {
-  const cs = state.cycleState;
-  const session = state.currentSession;
-  if (!session || session.dayIndex !== cs.dayIndex || session.weekIndex !== cs.weekIndex) {
-    state.currentSession = buildSessionForCurrentCycle();
+  if (!state.currentSession) {
+    state.currentSession = buildSessionForPosition(state.cycleState);
     persist();
   }
 }
@@ -483,8 +491,19 @@ function openSessionEditor(log) {
 function finishDay(completed) {
   const session = { ...state.currentSession, completed, date: new Date().toISOString() };
   state.sessionLogs.push(session);
-  const { cycleState, cycleCompleted } = advanceCycle(state.cycleState, state.settings);
-  state.cycleState = cycleState;
+
+  let cycleCompleted = false;
+  if (completed) {
+    // Advance from wherever this session actually was — which may differ
+    // from state.cycleState if it was started via the day picker rather
+    // than the recommended next day — so completing an out-of-order day
+    // still picks up the rotation from there.
+    const result = advanceCycle({ dayIndex: session.dayIndex, weekIndex: session.weekIndex, cycleNumber: session.cycleNumber }, state.settings);
+    state.cycleState = result.cycleState;
+    cycleCompleted = result.cycleCompleted;
+  }
+  // A skip logs the attempt but never moves the recommended-next pointer —
+  // only an actual completion does. state.cycleState is left untouched.
   state.currentSession = null;
   persist();
 
@@ -606,9 +625,22 @@ const actions = {
   skipDay() {
     finishDay(false);
   },
+  // Starting a day from the picker only drafts a session for it — it does
+  // NOT move the persisted "recommended next" pointer (state.cycleState).
+  // Only actually completing a day does that (see finishDay). So merely
+  // starting, or starting-then-skipping, an out-of-order day leaves the
+  // real recommendation unchanged for next time.
   chooseDay(dayIndex) {
-    if (dayIndex < 1 || dayIndex > DAY_COUNT || dayIndex === state.cycleState.dayIndex) return;
-    state.cycleState = { ...state.cycleState, dayIndex };
+    if (dayIndex < 1 || dayIndex > DAY_COUNT) return;
+    if (state.currentSession?.dayIndex === dayIndex) {
+      renderCurrentView();
+      return;
+    }
+    state.currentSession = buildSessionForPosition({
+      dayIndex,
+      weekIndex: state.cycleState.weekIndex,
+      cycleNumber: state.cycleState.cycleNumber,
+    });
     persist();
     renderCurrentView();
   },
@@ -656,6 +688,32 @@ const actions = {
     state.currentSession = null;
     persist();
     renderCurrentView();
+  },
+  resyncCycleFromHistory() {
+    const derived = deriveCycleStateFromHistory(state.sessionLogs, state.settings);
+    const current = state.cycleState;
+    if (derived.dayIndex === current.dayIndex && derived.weekIndex === current.weekIndex && derived.cycleNumber === current.cycleNumber) {
+      showToast("Already matches your logged history");
+      return;
+    }
+    showModal(
+      `<h2>Resync cycle position?</h2>
+       <p class="set-meta">Computed from the most recent workout you actually completed (skips ignored).</p>
+       <div class="bw-row"><span>Current</span><span>Day ${current.dayIndex} · Week ${current.weekIndex} · Cycle ${current.cycleNumber}</span></div>
+       <div class="bw-row"><span>From history</span><span>Day ${derived.dayIndex} · Week ${derived.weekIndex} · Cycle ${derived.cycleNumber}</span></div>
+       <div class="btn-row"><button class="btn btn-primary btn-block" id="resync-confirm">Use this</button></div>
+       <div class="btn-row"><button class="btn btn-block" id="resync-cancel">Cancel</button></div>`,
+      (root) => {
+        root.querySelector("#resync-confirm").addEventListener("click", () => {
+          state.cycleState = derived;
+          state.currentSession = null;
+          persist();
+          closeModal();
+          renderCurrentView();
+        });
+        root.querySelector("#resync-cancel").addEventListener("click", closeModal);
+      }
+    );
   },
   setSetting(key, value) {
     state.settings[key] = value;

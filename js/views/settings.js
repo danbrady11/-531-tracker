@@ -48,6 +48,10 @@ export function renderSettings(root, ctx) {
           ? "this cycle ends with a deload (week 4)"
           : "this cycle skips deload — ends after week 3"
       }</div>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-action="resync-cycle">Resync from history</button>
+      </div>
+      <div class="set-meta">Recomputes this from the most recent workout you actually completed — use it if this ever looks off.</div>
     </div>
 
     <div class="card">
@@ -161,6 +165,7 @@ export function renderSettings(root, ctx) {
   root.querySelector('[data-action="edit-week"]')?.addEventListener("change", (e) =>
     ctx.actions.setCyclePosition({ weekIndex: Number(e.target.value) })
   );
+  root.querySelector('[data-action="resync-cycle"]')?.addEventListener("click", () => ctx.actions.resyncCycleFromHistory());
 
   root.querySelectorAll('[data-action="setting"]').forEach((el) =>
     el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, el.type === "number" ? Number(el.value) : el.value))
