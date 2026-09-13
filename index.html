@@ -50,7 +50,30 @@
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js").catch((err) => console.error("SW registration failed", err));
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .then((reg) => {
+            // A standalone/home-screen-installed PWA on iOS can sit resumed
+            // from the background for a long time without ever making a
+            // fresh navigation request, so it can miss an update check that
+            // a plain Safari tab would pick up. Force one now and again
+            // whenever the app comes back to the foreground.
+            reg.update();
+            document.addEventListener("visibilitychange", () => {
+              if (document.visibilityState === "visible") reg.update();
+            });
+          })
+          .catch((err) => console.error("SW registration failed", err));
+      });
+
+      // Once a new service worker takes over, reload immediately so the new
+      // version is actually running instead of waiting for the next full
+      // close-and-reopen — this is the step that was previously manual.
+      let reloadedForNewWorker = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloadedForNewWorker) return;
+        reloadedForNewWorker = true;
+        window.location.reload();
       });
     }
   </script>
