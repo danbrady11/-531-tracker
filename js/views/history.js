@@ -1,6 +1,8 @@
-import { bodyweightRollingAverage, combinedLiftMetricSeries } from "../state.js";
+import { bodyweightRollingAverage, combinedLiftMetricSeries, accessoryHistory, rehabAdherence } from "../state.js";
 import { drawLineChart, drawMultiLineChart } from "../chart.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
+
+const KNEE_RAISE_NAME = "Standing banded knee raise";
 
 function shortDate(iso) {
   const d = new Date(iso);
@@ -8,9 +10,11 @@ function shortDate(iso) {
 }
 
 let liftMetric = "e1rm"; // 'e1rm' | 'volume'
+let kneeRaiseMetric = "weight"; // 'weight' | 'reps'
 
 export function renderHistory(root, ctx) {
   const { state } = ctx;
+  const adherence = rehabAdherence(state.sessionLogs);
 
   root.innerHTML = `
     <div class="card">
@@ -22,6 +26,23 @@ export function renderHistory(root, ctx) {
       <div class="chart-wrap"><canvas class="chart-canvas" id="lift-chart"></canvas></div>
       <div id="lift-chart-empty"></div>
       <div class="chart-legend" id="lift-legend"></div>
+    </div>
+
+    <div class="card">
+      <h3>Standing Banded Knee Raise</h3>
+      <div class="pill-tabs" id="knee-raise-tabs">
+        <button class="pill-tab ${kneeRaiseMetric === "weight" ? "active" : ""}" data-metric="weight">Band tension</button>
+        <button class="pill-tab ${kneeRaiseMetric === "reps" ? "active" : ""}" data-metric="reps">Reps</button>
+      </div>
+      <div class="chart-wrap"><canvas class="chart-canvas" id="knee-raise-chart"></canvas></div>
+      <div id="knee-raise-empty"></div>
+    </div>
+
+    <div class="card">
+      <h3>Rehab Adherence</h3>
+      <div class="bw-row"><span>Daily Psoas</span><span>${adherence.psoasDone} / ${adherence.psoasTotal} days</span></div>
+      <div class="bw-row"><span>Shoulder Rehab</span><span>${adherence.shoulderDone} / ${adherence.shoulderTotal} days</span></div>
+      ${adherence.psoasTotal === 0 && adherence.shoulderTotal === 0 ? `<div class="empty-state">No rehab work logged yet.</div>` : ""}
     </div>
 
     <div class="card">
@@ -43,11 +64,18 @@ export function renderHistory(root, ctx) {
   `;
 
   renderLiftChart(root, state);
+  renderKneeRaiseChart(root, state);
   renderBodyweight(root, state, ctx);
 
   root.querySelectorAll("#metric-tabs .pill-tab").forEach((btn) =>
     btn.addEventListener("click", () => {
       liftMetric = btn.dataset.metric;
+      renderHistory(root, ctx);
+    })
+  );
+  root.querySelectorAll("#knee-raise-tabs .pill-tab").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      kneeRaiseMetric = btn.dataset.metric;
       renderHistory(root, ctx);
     })
   );
@@ -82,6 +110,17 @@ function renderLiftChart(root, state) {
     (lift) =>
       `<span class="legend-item"><span class="legend-swatch" style="background:var(${LIFT_META[lift].colorVar})"></span>${LIFT_META[lift].label}</span>`
   ).join("");
+}
+
+function renderKneeRaiseChart(root, state) {
+  const history = accessoryHistory(state.sessionLogs, KNEE_RAISE_NAME);
+  const canvas = root.querySelector("#knee-raise-chart");
+  const points = history.map((h) => ({ label: shortDate(h.date), value: h[kneeRaiseMetric] }));
+  canvas.hidden = points.length === 0;
+  if (points.length) drawLineChart(canvas, points, { suffix: kneeRaiseMetric === "weight" ? " lb" : "" });
+  root.querySelector("#knee-raise-empty").innerHTML = points.length
+    ? ""
+    : `<div class="empty-state">No Standing Banded Knee Raise sets logged yet.</div>`;
 }
 
 function renderBodyweight(root, state, ctx) {

@@ -1,4 +1,4 @@
-import { dayInfo, DAY_COUNT } from "../program.js";
+import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
 import { lastAccessoryLog } from "../state.js";
 
@@ -101,7 +101,59 @@ function accessoryBlock(accessory, session, sessionLogs) {
         <span>${escapeHtml(accessory.name)}</span>
         <span class="accessory-target">${accessory.sets ? `${accessory.sets}×${accessory.repsLabel}` : accessory.repsLabel}</span>
       </div>
+      ${accessory.cue ? `<div class="accessory-cue">${escapeHtml(accessory.cue)}</div>` : ""}
       ${entries.length ? `<div class="accessory-sets">${chips}</div>` : `<div class="set-meta">Log when done — no set count tracked.</div>`}
+    </div>`;
+}
+
+/** Daily Psoas: checkbox-only, no weight/reps, rendered on every day from one shared definition. */
+function dailyPsoasBlock(session) {
+  const rows = (session.dailyPsoas || [])
+    .map((item) => {
+      const def = DAILY_PSOAS.find((d) => d.name === item.name);
+      return `
+        <div class="rehab-row">
+          <button class="set-check ${item.completed ? "done" : ""}" data-action="toggle-daily-psoas" data-name="${escapeHtml(item.name)}" aria-label="Mark done">
+            ${item.completed ? "✓" : ""}
+          </button>
+          <div class="set-info">
+            <div class="rehab-name">${escapeHtml(item.name)}</div>
+            ${def?.cue ? `<div class="accessory-cue">${escapeHtml(def.cue)}</div>` : ""}
+          </div>
+        </div>`;
+    })
+    .join("");
+  return `
+    <div class="card rehab-card">
+      <h3>Daily — Psoas</h3>
+      ${rows}
+    </div>`;
+}
+
+/** Single checkbox, no weight/reps — a band sequence the user already knows. */
+function shoulderRehabBlock(session) {
+  const done = !!session.shoulderRehabCompleted;
+  return `
+    <div class="card rehab-card">
+      <h3>Shoulder Rehab</h3>
+      <div class="rehab-row">
+        <button class="set-check ${done ? "done" : ""}" data-action="toggle-shoulder-rehab" aria-label="Mark done">
+          ${done ? "✓" : ""}
+        </button>
+        <div class="set-info">
+          <div class="rehab-name">${escapeHtml(SHOULDER_REHAB_ITEM.name)}</div>
+          <div class="accessory-cue">${escapeHtml(SHOULDER_REHAB_ITEM.cue)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/** Psoas Strength: logged like a normal accessory (weight/band level + reps, prefilled). */
+function psoasStrengthBlock(session, sessionLogs) {
+  return `
+    <div class="card">
+      <h3>Psoas Strength</h3>
+      ${PSOAS_STRENGTH.map((a) => accessoryBlock(a, session, sessionLogs)).join("")}
     </div>`;
 }
 
@@ -207,6 +259,11 @@ function renderWorkoutScreen(root, ctx) {
   html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of 4 · Day ${dayIndex} of 6</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
+  // Shoulder Rehab goes before the main lift; Daily Psoas is prep work done
+  // on every day, so both come before the lift itself.
+  if (day.hasShoulderRehab) html += shoulderRehabBlock(session);
+  html += dailyPsoasBlock(session);
+
   if (isMainDay) {
     const tm = state.trainingMaxes[day.lift].currentValue;
     html += `<div class="card">
@@ -231,7 +288,8 @@ function renderWorkoutScreen(root, ctx) {
       <div class="set-meta">No main lift today.</div></div>`;
   }
 
-  const fixedNames = new Set(day.accessories.map((a) => a.name));
+  const psoasStrengthNames = day.hasPsoasStrength ? new Set(PSOAS_STRENGTH.map((a) => a.name)) : new Set();
+  const fixedNames = new Set([...day.accessories.map((a) => a.name), ...psoasStrengthNames]);
   const extraNames = [...new Set((session.accessorySets || []).map((s) => s.exerciseName))].filter((n) => !fixedNames.has(n));
 
   html += `<div class="card">
@@ -244,6 +302,8 @@ function renderWorkoutScreen(root, ctx) {
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
     ${addExerciseControls(state.customExercises || [])}
   </div>`;
+
+  if (day.hasPsoasStrength) html += psoasStrengthBlock(session, state.sessionLogs);
 
   html += `<div class="card notes-field">
     <h3>Notes</h3>
@@ -326,6 +386,10 @@ function wireActions(root, ctx) {
   root.querySelectorAll('[data-action="toggle-accessory"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleAccessorySet(el.dataset.exercise, Number(el.dataset.index)))
   );
+  root.querySelectorAll('[data-action="toggle-daily-psoas"]').forEach((el) =>
+    el.addEventListener("click", () => actions.toggleDailyPsoas(el.dataset.name))
+  );
+  root.querySelector('[data-action="toggle-shoulder-rehab"]')?.addEventListener("click", () => actions.toggleShoulderRehab());
   root.querySelectorAll('[data-action="accessory-value"]').forEach((el) =>
     el.addEventListener("change", () =>
       actions.setAccessoryValue(el.dataset.exercise, Number(el.dataset.index), el.dataset.field, el.value === "" ? null : Number(el.value))

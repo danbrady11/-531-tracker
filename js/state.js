@@ -152,6 +152,54 @@ export function combinedLiftMetricSeries(sessionLogs, metric) {
   return { xLabels, series };
 }
 
+/**
+ * History for a single accessory exercise, keyed by name: [{date, weekIndex,
+ * weight, reps}], oldest first. weight is the max logged that session (band
+ * tension/weight is usually held constant across sets, so max is a safe
+ * representative value); reps is the average per completed set that session.
+ * Works for any accessory, but this is what backs the Standing Banded Knee
+ * Raise chart in History.
+ *
+ * Deliberately does NOT require log.completed (unlike amrapHistory/
+ * volumeHistory, which track the main lift itself): rehab/accessory work can
+ * happen on a day whose lift ended up skipped, and it should still count —
+ * same reasoning as rehabAdherence tracking independent of session completion.
+ */
+export function accessoryHistory(sessionLogs, exerciseName) {
+  return sessionLogs
+    .flatMap((log) => {
+      const sets = (log.accessorySets || []).filter(
+        (s) => s.exerciseName === exerciseName && s.completed && s.reps != null
+      );
+      if (sets.length === 0) return [];
+      const weight = Math.max(...sets.map((s) => s.weight ?? 0));
+      const reps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
+      return [{ date: log.date, weekIndex: log.weekIndex, weight, reps }];
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/**
+ * Adherence counts for rehab work, tracked independent of whether the day's
+ * lift itself was completed or skipped — a session only counts toward a
+ * block's total if that block actually existed on it (so old history from
+ * before this feature existed isn't counted as a miss).
+ */
+export function rehabAdherence(sessionLogs) {
+  const withPsoas = sessionLogs.filter((log) => Array.isArray(log.dailyPsoas) && log.dailyPsoas.length > 0);
+  const psoasDone = withPsoas.filter((log) => log.dailyPsoas.every((item) => item.completed)).length;
+
+  const withShoulder = sessionLogs.filter((log) => log.shoulderRehabCompleted !== undefined);
+  const shoulderDone = withShoulder.filter((log) => log.shoulderRehabCompleted).length;
+
+  return {
+    psoasTotal: withPsoas.length,
+    psoasDone,
+    shoulderTotal: withShoulder.length,
+    shoulderDone,
+  };
+}
+
 /** Group session logs by calendar date (YYYY-MM-DD, local time) for the Calendar view. */
 export function sessionsByDate(sessionLogs) {
   const map = new Map();

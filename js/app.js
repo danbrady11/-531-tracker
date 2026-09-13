@@ -1,7 +1,7 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate } from "./state.js";
-import { dayInfo, DAY_COUNT } from "./program.js";
+import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH } from "./program.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
@@ -178,11 +178,19 @@ function buildSessionForCurrentCycle() {
     }
   }
 
-  const session = newSessionLog(state.cycleState, mainSets, supplementalSets, day.accessories);
+  const accessoriesForSession = [...day.accessories, ...(day.hasPsoasStrength ? PSOAS_STRENGTH : [])];
+  const session = newSessionLog(state.cycleState, mainSets, supplementalSets, accessoriesForSession);
   session.accessorySets = session.accessorySets.map((entry) => {
     const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
     return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
   });
+  // Rehab tracking, separate from the lift itself: a daily checklist (every
+  // day, no weight/reps) and, on days that have it, a single shoulder rehab
+  // checkbox. Both persist with the session regardless of whether the day
+  // ends up completed or skipped, so adherence can be seen independent of
+  // whether the lift happened.
+  session.dailyPsoas = DAILY_PSOAS.map((item) => ({ name: item.name, completed: false }));
+  if (day.hasShoulderRehab) session.shoulderRehabCompleted = false;
   return session;
 }
 
@@ -419,6 +427,17 @@ const actions = {
   },
   removeAdHocExercise(exerciseName) {
     state.currentSession.accessorySets = state.currentSession.accessorySets.filter((s) => s.exerciseName !== exerciseName);
+    persist();
+    renderCurrentView();
+  },
+  toggleDailyPsoas(name) {
+    const item = state.currentSession.dailyPsoas.find((i) => i.name === name);
+    item.completed = !item.completed;
+    persist();
+    renderCurrentView();
+  },
+  toggleShoulderRehab() {
+    state.currentSession.shoulderRehabCompleted = !state.currentSession.shoulderRehabCompleted;
     persist();
     renderCurrentView();
   },

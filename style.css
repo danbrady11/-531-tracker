@@ -13,6 +13,8 @@
   --danger-bg: #fee2e2;
   --amrap: #7c3aed;
   --amrap-bg: #f3e8ff;
+  --rehab: #0d9488;
+  --rehab-bg: #ccfbf1;
   --input-bg: #ffffff;
   --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
   --radius: 14px;
@@ -35,6 +37,8 @@
     --danger-bg: #3f1414;
     --amrap: #c084fc;
     --amrap-bg: #2c1a45;
+    --rehab: #2dd4bf;
+    --rehab-bg: #0f3d38;
     --input-bg: #0f1826;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   }
@@ -55,6 +59,8 @@
   --danger-bg: #3f1414;
   --amrap: #c084fc;
   --amrap-bg: #2c1a45;
+  --rehab: #2dd4bf;
+  --rehab-bg: #0f3d38;
   --input-bg: #0f1826;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -286,6 +292,46 @@ button, input, select, textarea {
   font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 400;
+}
+
+.accessory-cue {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: -2px 0 8px;
+}
+
+/* Rehab work (Daily Psoas, Shoulder Rehab) — visually distinct from ordinary
+   lifting cards via a teal accent border and tinted heading. */
+.rehab-card {
+  border-color: var(--rehab);
+  border-width: 2px;
+}
+
+.rehab-card h3 {
+  color: var(--rehab);
+}
+
+.rehab-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rehab-row:last-child { border-bottom: none; }
+
+.rehab-row .set-check {
+  border-color: var(--rehab);
+}
+.rehab-row .set-check.done {
+  background: var(--rehab-bg);
+  border-color: var(--rehab);
+  color: var(--rehab);
+}
+
+.rehab-name {
+  font-weight: 600;
 }
 
 .accessory-sets {
