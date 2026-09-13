@@ -637,15 +637,10 @@ input, select, textarea {
 }
 
 .cal-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  border: 2px solid var(--accent);
-  background: transparent;
-}
-
-.cal-dot-multi {
-  background: var(--text-muted);
+  background: var(--accent);
 }
 
 .cal-legend {
