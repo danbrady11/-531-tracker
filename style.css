@@ -84,6 +84,13 @@ button, input, select, textarea {
   color: inherit;
 }
 
+/* iOS Safari auto-zooms the page on focusing any form control whose font-size
+   computes below 16px. Setting it in absolute px (not rem) here guarantees
+   that regardless of what any more specific rule elsewhere sets it to. */
+input, select, textarea {
+  font-size: 16px;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -270,7 +277,7 @@ button, input, select, textarea {
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--input-bg);
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 .accessory-block {
