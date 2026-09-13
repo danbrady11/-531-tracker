@@ -1,6 +1,6 @@
 import { sessionsByDate } from "../state.js";
 import { dayInfo } from "../program.js";
-import { LIFT_META, NON_LIFT_COLOR_VAR } from "../lift-meta.js";
+import { LIFT_META, NON_LIFT_DAY_META, NON_LIFT_COLOR_VAR } from "../lift-meta.js";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -19,7 +19,8 @@ function dateKey(y, m, d) {
 
 function colorVarForLog(log) {
   const day = dayInfo(log.dayIndex);
-  return day.lift ? LIFT_META[day.lift].colorVar : NON_LIFT_COLOR_VAR;
+  if (day.lift) return LIFT_META[day.lift].colorVar;
+  return NON_LIFT_DAY_META[day.kind]?.colorVar || NON_LIFT_COLOR_VAR;
 }
 
 export function renderCalendar(root, ctx) {
@@ -72,8 +73,8 @@ export function renderCalendar(root, ctx) {
           .join("")}
       </div>
       <div class="cal-legend">
-        ${Object.entries(LIFT_META)
-          .map(([, meta]) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
+        ${[...Object.values(LIFT_META), ...Object.values(NON_LIFT_DAY_META)]
+          .map((meta) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
           .join("")}
       </div>
     </div>

@@ -328,11 +328,156 @@ function renderSessionDetail(log) {
         .join("")}</div>`;
     }
   }
+  if (log.dailyPsoas?.length) {
+    html += `<div class="session-detail-group"><h4>Daily Psoas</h4>${log.dailyPsoas
+      .map((item) => detailLine(item.name, null, null, item.completed))
+      .join("")}</div>`;
+  }
+  if (log.shoulderRehabCompleted !== undefined) {
+    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>${detailLine("Shoulder Rehab", null, null, log.shoulderRehabCompleted)}</div>`;
+  }
   if (log.notes) {
     html += `<div class="session-detail-group"><h4>Notes</h4><p>${escapeHtml(log.notes)}</p></div>`;
   }
-  html += `<div class="btn-row"><button class="btn btn-block" id="detail-close">Close</button></div>`;
+  html += `<div class="btn-row"><button class="btn btn-primary btn-block" id="detail-edit">Edit this workout</button></div>
+    <div class="btn-row"><button class="btn btn-block" id="detail-close">Close</button></div>`;
   return html;
+}
+
+function editSetRow(section, index, weight, reps, completed, fallbackLabel, targetInfo) {
+  const fallback = fallbackLabel ?? "";
+  return `
+    <div class="set-row">
+      <button class="set-check ${completed ? "done" : ""}" data-hedit-action="toggle" data-section="${section}" data-index="${index}" data-fallback="${escapeHtml(String(fallback))}" aria-label="Mark set complete">
+        ${completed ? "✓" : escapeHtml(String(fallback))}
+      </button>
+      <div class="set-info">
+        <div class="set-weight">
+          <input class="set-input" type="number" step="2.5" value="${weight ?? ""}" data-hedit-action="weight" data-section="${section}" data-index="${index}" style="width:72px" /> lb
+        </div>
+        ${targetInfo ? `<div class="set-meta">${targetInfo}</div>` : ""}
+      </div>
+      <input class="set-input" type="number" value="${reps ?? ""}" data-hedit-action="reps" data-section="${section}" data-index="${index}" />
+    </div>`;
+}
+
+function renderSessionEditForm(draft) {
+  const day = dayInfo(draft.dayIndex);
+  let html = `<h2>Edit — ${escapeHtml(day.name)}</h2>
+    <p class="set-meta">${new Date(draft.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+    <div class="field" style="flex-direction:row;align-items:center;gap:10px;display:flex;">
+      <input type="checkbox" style="width:20px;height:20px;" id="hedit-completed" ${draft.completed ? "checked" : ""} />
+      <label for="hedit-completed">Counted as completed (not skipped)</label>
+    </div>`;
+
+  if (draft.warmupSets?.length) {
+    html += `<div class="session-detail-group"><h4>Warm-up</h4>${draft.warmupSets
+      .map((s, i) => editSetRow("warmup", i, s.weight, s.actualReps ?? s.reps, s.completed, i + 1))
+      .join("")}</div>`;
+  }
+  if (draft.mainSets?.length) {
+    html += `<div class="session-detail-group"><h4>Main sets</h4>${draft.mainSets
+      .map((s, i) => editSetRow("main", i, s.weight, s.actualReps, s.completed, i + 1, `${Math.round(s.percentage * 100)}%${s.isAmrap ? " AMRAP" : ""}`))
+      .join("")}</div>`;
+  }
+  if (draft.supplementalSets?.length) {
+    const label = draft.supplementalSets[0].type === "fsl" ? "FSL" : "Boring But Big";
+    html += `<div class="session-detail-group"><h4>${label}</h4>${draft.supplementalSets
+      .map((s, i) => editSetRow("supp", i, s.weight, s.reps, s.completed, i + 1))
+      .join("")}</div>`;
+  }
+  if (draft.accessorySets?.length) {
+    const byExercise = new Map();
+    for (const s of draft.accessorySets) {
+      if (!byExercise.has(s.exerciseName)) byExercise.set(s.exerciseName, []);
+      byExercise.get(s.exerciseName).push(s);
+    }
+    let n = 1;
+    for (const [name, sets] of byExercise) {
+      html += `<div class="session-detail-group"><h4>${escapeHtml(name)}</h4>${sets
+        .map((s, i) => editSetRow("acc", draft.accessorySets.indexOf(s), s.weight, s.reps, s.completed, i + 1))
+        .join("")}</div>`;
+    }
+  }
+  if (draft.dailyPsoas?.length) {
+    html += `<div class="session-detail-group"><h4>Daily Psoas</h4>${draft.dailyPsoas
+      .map(
+        (item, i) => `
+        <div class="rehab-row">
+          <button class="set-check ${item.completed ? "done" : ""}" data-hedit-action="toggle-psoas" data-index="${i}" aria-label="Mark done">${item.completed ? "✓" : ""}</button>
+          <div class="set-info"><div class="rehab-name">${escapeHtml(item.name)}</div></div>
+        </div>`
+      )
+      .join("")}</div>`;
+  }
+  if (draft.shoulderRehabCompleted !== undefined) {
+    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>
+      <div class="rehab-row">
+        <button class="set-check ${draft.shoulderRehabCompleted ? "done" : ""}" data-hedit-action="toggle-shoulder" aria-label="Mark done">${draft.shoulderRehabCompleted ? "✓" : ""}</button>
+        <div class="set-info"><div class="rehab-name">Shoulder Rehab</div></div>
+      </div>
+    </div>`;
+  }
+  html += `<div class="session-detail-group"><h4>Notes</h4><textarea id="hedit-notes" style="width:100%;min-height:72px;" placeholder="Notes">${escapeHtml(draft.notes || "")}</textarea></div>`;
+  html += `<div class="btn-row"><button class="btn btn-primary btn-block" id="hedit-save">Save changes</button></div>
+    <div class="btn-row"><button class="btn btn-block" id="hedit-cancel">Cancel</button></div>`;
+  return html;
+}
+
+function arrayForSection(draft, section) {
+  return { main: draft.mainSets, supp: draft.supplementalSets, warmup: draft.warmupSets, acc: draft.accessorySets }[section];
+}
+
+function wireSessionEditForm(root, draft) {
+  root.querySelectorAll('[data-hedit-action="toggle"]').forEach((el) =>
+    el.addEventListener("click", () => {
+      const arr = arrayForSection(draft, el.dataset.section);
+      const item = arr[Number(el.dataset.index)];
+      item.completed = !item.completed;
+      el.classList.toggle("done", item.completed);
+      el.textContent = item.completed ? "✓" : el.dataset.fallback;
+    })
+  );
+  root.querySelectorAll('[data-hedit-action="weight"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      const arr = arrayForSection(draft, el.dataset.section);
+      arr[Number(el.dataset.index)].weight = el.value === "" ? null : Number(el.value);
+    })
+  );
+  root.querySelectorAll('[data-hedit-action="reps"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      const arr = arrayForSection(draft, el.dataset.section);
+      const item = arr[Number(el.dataset.index)];
+      const val = el.value === "" ? null : Number(el.value);
+      if (el.dataset.section === "main") item.actualReps = val;
+      else item.reps = val;
+    })
+  );
+  root.querySelectorAll('[data-hedit-action="toggle-psoas"]').forEach((el) =>
+    el.addEventListener("click", () => {
+      const item = draft.dailyPsoas[Number(el.dataset.index)];
+      item.completed = !item.completed;
+      el.classList.toggle("done", item.completed);
+      el.textContent = item.completed ? "✓" : "";
+    })
+  );
+  root.querySelector('[data-hedit-action="toggle-shoulder"]')?.addEventListener("click", (e) => {
+    draft.shoulderRehabCompleted = !draft.shoulderRehabCompleted;
+    e.currentTarget.classList.toggle("done", draft.shoulderRehabCompleted);
+    e.currentTarget.textContent = draft.shoulderRehabCompleted ? "✓" : "";
+  });
+
+  root.querySelector("#hedit-save").addEventListener("click", () => {
+    draft.completed = root.querySelector("#hedit-completed").checked;
+    draft.notes = root.querySelector("#hedit-notes").value;
+    actions.saveEditedSession(draft);
+  });
+  root.querySelector("#hedit-cancel").addEventListener("click", () => closeModal());
+}
+
+function openSessionEditor(log) {
+  const draft = JSON.parse(JSON.stringify(log));
+  showModal(renderSessionEditForm(draft), (root) => wireSessionEditForm(root, draft));
 }
 
 function finishDay(completed) {
@@ -473,6 +618,7 @@ const actions = {
     if (logs.length === 1) {
       showModal(renderSessionDetail(logs[0]), (root) => {
         root.querySelector("#detail-close")?.addEventListener("click", closeModal);
+        root.querySelector("#detail-edit")?.addEventListener("click", () => openSessionEditor(logs[0]));
       });
       return;
     }
@@ -483,12 +629,22 @@ const actions = {
     showModal(listHtml, (root) => {
       root.querySelectorAll("[data-log-index]").forEach((btn) =>
         btn.addEventListener("click", () => {
-          showModal(renderSessionDetail(logs[Number(btn.dataset.logIndex)]), (r) => {
+          const log = logs[Number(btn.dataset.logIndex)];
+          showModal(renderSessionDetail(log), (r) => {
             r.querySelector("#detail-close")?.addEventListener("click", closeModal);
+            r.querySelector("#detail-edit")?.addEventListener("click", () => openSessionEditor(log));
           });
         })
       );
     });
+  },
+  saveEditedSession(updatedLog) {
+    const idx = state.sessionLogs.findIndex((l) => l.id === updatedLog.id);
+    if (idx !== -1) state.sessionLogs[idx] = updatedLog;
+    persist();
+    closeModal();
+    showToast("Workout updated");
+    renderCurrentView();
   },
   setTrainingMax(lift, value) {
     state.trainingMaxes[lift] = { currentValue: value, updatedAt: new Date().toISOString() };

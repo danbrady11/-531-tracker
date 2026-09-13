@@ -780,6 +780,8 @@ canvas.chart-canvas[hidden] {
   padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   width: 100%;
   max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: var(--shadow);
 }
 
