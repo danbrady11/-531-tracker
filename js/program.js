@@ -20,21 +20,13 @@ export const PSOAS_STRENGTH = [
 // Single checkbox, no weight/rep logging — a band sequence, not tracked set by set.
 export const SHOULDER_REHAB_ITEM = { name: "Shoulder Rehab", cue: "Band sequence (own routine)" };
 
+// Reordered so Deadlift is last (day 6) rather than first — completing it is
+// what concludes a cycle. Each day's own content/flags are unchanged from
+// before; only which slot number holds which day moved. Existing history's
+// dayIndex values are re-mapped once in storage.js's migrate() so past
+// sessions keep showing the correct exercise name after this reorder.
 export const DAYS = {
   1: {
-    name: "Deadlift",
-    kind: "main",
-    lift: "deadlift",
-    supplemental: "fsl",
-    hasPsoasStrength: false,
-    hasShoulderRehab: false,
-    accessories: [
-      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
-      { name: "Seated calf raise", sets: 5, repsLabel: "15" },
-      { name: "Cable crunch", sets: 3, repsLabel: "12" },
-    ],
-  },
-  2: {
     name: "Bench",
     kind: "main",
     lift: "bench",
@@ -50,7 +42,7 @@ export const DAYS = {
       { name: "Curls", sets: 3, repsLabel: "12" },
     ],
   },
-  3: {
+  2: {
     name: "Recovery",
     kind: "recovery",
     lift: null,
@@ -62,7 +54,7 @@ export const DAYS = {
       { name: "Zone 2", sets: null, repsLabel: "30 min" },
     ],
   },
-  4: {
+  3: {
     name: "Squat",
     kind: "main",
     lift: "squat",
@@ -77,7 +69,7 @@ export const DAYS = {
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
-  5: {
+  4: {
     name: "Press",
     kind: "main",
     lift: "press",
@@ -89,7 +81,7 @@ export const DAYS = {
       { name: "Hammer curls", sets: 3, repsLabel: "12" },
     ],
   },
-  6: {
+  5: {
     name: "Accessory",
     kind: "accessory",
     lift: null,
@@ -101,6 +93,19 @@ export const DAYS = {
       { name: "Lateral raise", sets: 4, repsLabel: "15" },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15" },
       { name: "Zone 2", sets: null, repsLabel: "30 min" },
+    ],
+  },
+  6: {
+    name: "Deadlift",
+    kind: "main",
+    lift: "deadlift",
+    supplemental: "fsl",
+    hasPsoasStrength: false,
+    hasShoulderRehab: false,
+    accessories: [
+      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
+      { name: "Seated calf raise", sets: 5, repsLabel: "15" },
+      { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
 };

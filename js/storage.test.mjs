@@ -71,3 +71,33 @@ test("migrate renames an in-progress currentSession's accessorySets too", () => 
   const migrated = migrate(state);
   assert.equal(migrated.currentSession.accessorySets[0].exerciseName, "Reverse pec deck / cable reverse fly");
 });
+
+test("migrate rotates old dayIndex values to match the reordered program (Deadlift day1 -> day6, etc.)", () => {
+  const state = {
+    sessionLogs: [
+      { ...sessionWith([]), dayIndex: 1 }, // was Deadlift
+      { ...sessionWith([]), dayIndex: 6 }, // was Accessory
+      { ...sessionWith([]), dayIndex: 5 }, // was Press
+    ],
+    cycleState: { dayIndex: 1, weekIndex: 3, cycleNumber: 1 },
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [6, 5, 4]);
+  assert.equal(migrated.cycleState.dayIndex, 6);
+});
+
+test("migrate's day-order rotation runs exactly once (flagged), not repeatedly on reload", () => {
+  const once = migrate({ sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }] });
+  assert.equal(once.sessionLogs[0].dayIndex, 6);
+  assert.equal(once._dayOrderRotatedV1, true);
+
+  // Simulate a reload: migrate() runs again on the already-migrated state.
+  const twice = migrate(once);
+  assert.equal(twice.sessionLogs[0].dayIndex, 6, "must not rotate a second time");
+});
+
+test("migrate rotates an in-progress currentSession's dayIndex too", () => {
+  const state = { sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 5 } }; // was Press
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.dayIndex, 4);
+});

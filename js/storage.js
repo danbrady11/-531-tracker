@@ -49,6 +49,20 @@ function renameAccessoryEntries(accessorySets) {
   );
 }
 
+// One-time day-order reorder: Deadlift moved from day 1 to day 6 (so
+// completing it is what concludes a cycle, instead of it always being the
+// first day of a fresh week); Bench/Recovery/Squat/Press/Accessory each
+// shifted back one slot to make room. Maps OLD dayIndex -> NEW dayIndex so
+// existing history keeps naming the same real exercise after the reorder.
+// Guarded by a flag because — unlike the accessory renames above — this
+// rotation is NOT idempotent: applying it twice would shift everything by
+// two slots instead of one.
+const DAY_INDEX_ROTATE_V1 = { 1: 6, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
+
+function rotateDayIndex(dayIndex) {
+  return DAY_INDEX_ROTATE_V1[dayIndex] ?? dayIndex;
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -78,6 +92,16 @@ export function migrate(state) {
   if (merged.currentSession?.accessorySets) {
     merged.currentSession = { ...merged.currentSession, accessorySets: renameAccessoryEntries(merged.currentSession.accessorySets) };
   }
+
+  if (!state._dayOrderRotatedV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: rotateDayIndex(log.dayIndex) }));
+    merged.cycleState = { ...merged.cycleState, dayIndex: rotateDayIndex(merged.cycleState.dayIndex) };
+    if (merged.currentSession) {
+      merged.currentSession = { ...merged.currentSession, dayIndex: rotateDayIndex(merged.currentSession.dayIndex) };
+    }
+    merged._dayOrderRotatedV1 = true;
+  }
+
   return merged;
 }
 
