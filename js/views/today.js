@@ -1,6 +1,6 @@
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
-import { lastAccessoryLog } from "../state.js";
+import { lastAccessoryLog, effectiveWeekCount } from "../state.js";
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -232,6 +232,7 @@ function renderSplashScreen(root, ctx) {
   const { state } = ctx;
   const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
   const day = dayInfo(dayIndex);
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
 
   const otherDaysHtml = Array.from({ length: DAY_COUNT }, (_, i) => i + 1)
     .filter((i) => i !== dayIndex)
@@ -247,7 +248,7 @@ function renderSplashScreen(root, ctx) {
 
   root.innerHTML = `
     <div class="card splash-hero">
-      <div class="splash-kicker">Up next · Cycle ${cycleNumber} · Week ${weekIndex} of 4</div>
+      <div class="splash-kicker">Up next · Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount}</div>
       <h2 class="splash-title">${escapeHtml(day.name)}</h2>
       <div class="set-meta">${DAY_KIND_LABEL[day.kind]}</div>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
@@ -273,9 +274,10 @@ function renderWorkoutScreen(root, ctx) {
   const session = state.currentSession;
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
 
   let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;
-  html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of 4 · Day ${dayIndex} of 6</div>`;
+  html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of 6</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
   // Shoulder Rehab goes before the main lift; Daily Psoas is prep work done

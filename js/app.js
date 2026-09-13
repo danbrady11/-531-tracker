@@ -1,6 +1,6 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory } from "./state.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH } from "./program.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
@@ -213,7 +213,8 @@ function ensureCurrentSession() {
 
 function updateCycleBadge() {
   const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
-  cycleBadge.textContent = `Day ${dayIndex}/6 · Week ${weekIndex}/4 · Cycle ${cycleNumber}`;
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
+  cycleBadge.textContent = `Day ${dayIndex}/6 · Week ${weekIndex}/${weekCount} · Cycle ${cycleNumber}`;
 }
 
 function applyTheme() {
