@@ -8,7 +8,7 @@ export const DAYS = {
     supplemental: "fsl",
     accessories: [
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
-      { name: "Seated calf raise", sets: 4, repsLabel: "15" },
+      { name: "Seated calf raise", sets: 5, repsLabel: "15" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
@@ -46,7 +46,7 @@ export const DAYS = {
     supplemental: "fsl",
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg" },
-      { name: "Standing calf raise", sets: 4, repsLabel: "15" },
+      { name: "Standing calf raise", sets: 5, repsLabel: "15" },
       { name: "Lateral raise", sets: 4, repsLabel: "15" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
@@ -71,7 +71,6 @@ export const DAYS = {
       { name: "Seated cable row (close grip)", sets: 5, repsLabel: "10" },
       { name: "Lateral raise", sets: 4, repsLabel: "15" },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15" },
-      { name: "Standing calf raise", sets: 3, repsLabel: "15" },
       { name: "Zone 2", sets: null, repsLabel: "30 min" },
     ],
   },

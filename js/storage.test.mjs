@@ -6,6 +6,22 @@ function sessionWith(accessorySets) {
   return { id: "1", date: "2026-01-01T00:00:00.000Z", dayIndex: 2, weekIndex: 1, lift: "bench", completed: true, mainSets: [], supplementalSets: [], accessorySets, notes: "" };
 }
 
+test("migrate defaults deloadOnEvenCyclesOnly to true for a brand-new state", () => {
+  const migrated = migrate({});
+  assert.equal(migrated.settings.deloadOnEvenCyclesOnly, true);
+});
+
+test("migrate drops the superseded deloadEveryOtherCycle key", () => {
+  const migrated = migrate({ settings: { deloadEveryOtherCycle: true } });
+  assert.equal("deloadEveryOtherCycle" in migrated.settings, false);
+  assert.equal(migrated.settings.deloadOnEvenCyclesOnly, true);
+});
+
+test("migrate preserves an explicit deloadOnEvenCyclesOnly: false", () => {
+  const migrated = migrate({ settings: { deloadOnEvenCyclesOnly: false } });
+  assert.equal(migrated.settings.deloadOnEvenCyclesOnly, false);
+});
+
 test("migrate renames 'Rear delt' history to 'Reverse pec deck / cable reverse fly'", () => {
   const state = {
     sessionLogs: [sessionWith([{ exerciseName: "Rear delt", setIndex: 0, weight: 20, reps: 15, completed: true }])],

@@ -2,13 +2,14 @@ import { DAY_COUNT, WEEK_COUNT, dayInfo } from "./program.js";
 import { nextTrainingMax, epleyE1RM, LIFTS } from "./calc.js";
 
 /**
- * How many weeks the given cycle runs before wrapping. Normally always 4 (the
- * 4th being a deload). With deloadEveryOtherCycle on, only odd cycle numbers
- * (1, 3, 5, ...) get that 4th deload week — even cycles end after week 3.
+ * How many weeks the given cycle runs before wrapping. With
+ * deloadOnEvenCyclesOnly on (the default), only even cycle numbers (2, 4, 6,
+ * ...) get a 4th deload week — odd cycles end after week 3. Turning that
+ * setting off reverts to every cycle being 4 weeks with a deload.
  */
 export function effectiveWeekCount(cycleNumber, settings) {
-  if (!settings?.deloadEveryOtherCycle) return WEEK_COUNT;
-  return cycleNumber % 2 === 1 ? WEEK_COUNT : WEEK_COUNT - 1;
+  if (!settings?.deloadOnEvenCyclesOnly) return WEEK_COUNT;
+  return cycleNumber % 2 === 0 ? WEEK_COUNT : WEEK_COUNT - 1;
 }
 
 /** Advance the cycle by one day. Wrapping day 6->1 advances the week; wrapping the cycle's last week completes it. */

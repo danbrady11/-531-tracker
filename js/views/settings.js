@@ -54,10 +54,10 @@ export function renderSettings(root, ctx) {
       <h3>Program settings</h3>
       <div class="field">
         <label style="display:flex;align-items:center;gap:10px;flex-direction:row;">
-          <input type="checkbox" style="width:20px;height:20px;" ${s.deloadEveryOtherCycle ? "checked" : ""} data-action="setting-checkbox" data-key="deloadEveryOtherCycle" />
-          Deload every other cycle only
+          <input type="checkbox" style="width:20px;height:20px;" ${s.deloadOnEvenCyclesOnly ? "checked" : ""} data-action="setting-checkbox" data-key="deloadOnEvenCyclesOnly" />
+          Deload on even cycles only
         </label>
-        <div class="set-meta">Odd cycles (1, 3, 5…) get the week-4 deload; even cycles end after week 3.</div>
+        <div class="set-meta">Even cycles (2, 4, 6…) get the week-4 deload; odd cycles end after week 3. Uncheck to deload every cycle instead.</div>
       </div>
       <div class="field-row">
         <div class="field">

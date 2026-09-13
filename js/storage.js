@@ -12,9 +12,10 @@ function defaultState() {
       restTimerMainSec: 210,
       restTimerIsolationSec: 90,
       theme: "system", // 'system' | 'light' | 'dark'
-      // When true, only odd-numbered cycles (1, 3, 5, ...) run a week-4 deload;
-      // even-numbered cycles end after week 3 and roll straight into the next cycle.
-      deloadEveryOtherCycle: false,
+      // When true (the default), only even-numbered cycles (2, 4, 6, ...) run
+      // a week-4 deload; odd-numbered cycles end after week 3 and roll
+      // straight into the next cycle. Turn off to deload every cycle.
+      deloadOnEvenCyclesOnly: true,
     },
     trainingMaxes: {
       squat: { currentValue: 135, updatedAt: null },
@@ -60,6 +61,9 @@ export function migrate(state) {
     cycleState: { ...base.cycleState, ...(state.cycleState || {}) },
   };
   merged.settings.tmIncrements = { ...base.settings.tmIncrements, ...(state.settings?.tmIncrements || {}) };
+  // Superseded by deloadOnEvenCyclesOnly (with flipped parity) — drop the
+  // stale key so old exports/synced state don't carry dead settings forward.
+  delete merged.settings.deloadEveryOtherCycle;
   for (const lift of LIFTS) {
     merged.trainingMaxes[lift] = { ...base.trainingMaxes[lift], ...(state.trainingMaxes?.[lift] || {}) };
   }
