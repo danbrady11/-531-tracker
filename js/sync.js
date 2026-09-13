@@ -77,10 +77,20 @@ export function generateSyncCode() {
   return code;
 }
 
-/** Write { state, updatedAt } to syncs/{code}, replacing whatever was there. */
+/**
+ * Write { state, updatedAt } to syncs/{code}, replacing whatever was there.
+ *
+ * Older session logs (e.g. from before accessory/rehab tracking existed)
+ * can be missing fields entirely, leaving them `undefined` — harmless for
+ * localStorage since JSON.stringify silently drops undefined keys, but
+ * Firebase's set() throws on any undefined found anywhere in the tree. The
+ * JSON round-trip here applies that same silent-drop behavior before the
+ * write, so cloud sync tolerates the same legacy data local storage does.
+ */
 export async function pushToCloud(code, state, updatedAt) {
   const dbMod = await ensureReady();
-  await dbMod.set(dbMod.ref(dbInstance, `syncs/${code}`), { state, updatedAt });
+  const payload = JSON.parse(JSON.stringify({ state, updatedAt }));
+  await dbMod.set(dbMod.ref(dbInstance, `syncs/${code}`), payload);
 }
 
 /** One-time read of syncs/{code}. Returns { state, updatedAt } or null. */
