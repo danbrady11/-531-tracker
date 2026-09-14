@@ -259,8 +259,12 @@ function renderSplashScreen(root, ctx) {
 
   root.querySelectorAll('[data-action="start-day"]').forEach((el) =>
     el.addEventListener("click", () => {
-      const day = Number(el.dataset.day);
-      if (day !== state.cycleState.dayIndex) ctx.actions.chooseDay(day);
+      // Always defer to chooseDay — it already only rebuilds the session
+      // when it doesn't match the requested day (comparing against the
+      // session itself, not the recommended-next pointer), so this stays
+      // correct even when currentSession is left over from an earlier,
+      // different day that was never completed or skipped.
+      ctx.actions.chooseDay(Number(el.dataset.day));
       todayScreen = "workout";
       renderToday(root, ctx);
     })
