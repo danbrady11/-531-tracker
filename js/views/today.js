@@ -269,9 +269,12 @@ function renderSplashScreen(root, ctx) {
 
 function renderWorkoutScreen(root, ctx) {
   const { state } = ctx;
-  const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
-  const day = dayInfo(dayIndex);
   const session = state.currentSession;
+  // The screen must reflect whichever day this session was actually built
+  // for — which can differ from state.cycleState (the recommended next
+  // day) when the day picker was used to start a different one.
+  const { dayIndex, weekIndex, cycleNumber } = session;
+  const day = dayInfo(dayIndex);
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
   const weekCount = effectiveWeekCount(cycleNumber, state.settings);
