@@ -22,6 +22,30 @@ test("migrate preserves an explicit deloadOnEvenCyclesOnly: false", () => {
   assert.equal(migrated.settings.deloadOnEvenCyclesOnly, false);
 });
 
+test("migrate defaults trapBarDeadlift TM to 0 for an existing user, not copied from deadlift", () => {
+  const migrated = migrate({ trainingMaxes: { deadlift: { currentValue: 225, updatedAt: "2026-01-01" } } });
+  assert.equal(migrated.trainingMaxes.deadlift.currentValue, 225);
+  assert.equal(migrated.trainingMaxes.trapBarDeadlift.currentValue, 0);
+});
+
+test("migrate preserves an already-set trapBarDeadlift TM (e.g. after the one-time prompt)", () => {
+  const migrated = migrate({
+    trainingMaxes: {
+      deadlift: { currentValue: 225, updatedAt: "2026-01-01" },
+      trapBarDeadlift: { currentValue: 185, updatedAt: "2026-02-01" },
+    },
+  });
+  assert.equal(migrated.trainingMaxes.trapBarDeadlift.currentValue, 185);
+});
+
+test("migrate renames 'Nordic curl' history to 'Swiss ball leg curl'", () => {
+  const state = {
+    sessionLogs: [sessionWith([{ exerciseName: "Nordic curl", setIndex: 0, weight: 25, reps: 8, completed: true }])],
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.sessionLogs[0].accessorySets[0].exerciseName, "Swiss ball leg curl");
+});
+
 test("migrate renames 'Rear delt' history to 'Reverse pec deck / cable reverse fly'", () => {
   const state = {
     sessionLogs: [sessionWith([{ exerciseName: "Rear delt", setIndex: 0, weight: 20, reps: 15, completed: true }])],

@@ -2,6 +2,7 @@ import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from 
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH } from "./program.js";
+import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
@@ -270,7 +271,7 @@ function promptCycleCompletion() {
   const rows = LIFTS.map((lift) => {
     const cur = state.trainingMaxes[lift].currentValue;
     const next = cur + inc[lift];
-    return `<div class="bw-row"><span>${lift[0].toUpperCase()}${lift.slice(1)}</span><span>${cur} → <strong>${next}</strong> lb</span></div>`;
+    return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>${cur} → <strong>${next}</strong> lb</span></div>`;
   }).join("");
 
   showModal(
@@ -291,6 +292,53 @@ function promptCycleCompletion() {
         renderCurrentView();
       });
       root.querySelector("#tm-skip").addEventListener("click", () => {
+        closeModal();
+        renderCurrentView();
+      });
+    }
+  );
+}
+
+// One-time prompt, shown the first time this update loads: Day 6 switched
+// from conventional deadlift to trap bar deadlift, a different lift with a
+// different max, so trainingMaxes.trapBarDeadlift deliberately starts at 0
+// instead of copying the old deadlift number — this collects a real one
+// instead of leaving it silently at 0 until the user happens into Settings.
+function promptTrapBarTmIfNeeded() {
+  if (state._trapBarTmPromptedV1) return;
+
+  // Only marked prompted once the user actually dismisses it (below), not
+  // here — the service worker's auto-reload-on-update (see index.html) can
+  // fire moments after this same load, which would otherwise burn this
+  // one-time flag before anyone saw the modal.
+  const oldDeadliftTm = state.trainingMaxes.deadlift.currentValue;
+  showModal(
+    `<h2>Set your Trap Bar Deadlift max</h2>
+     <p class="set-meta">Day 6 now uses trap bar deadlift instead of conventional deadlift. Since it's a different lift, enter a starting training max rather than carrying over your old conventional deadlift TM (${oldDeadliftTm} lb, still kept for its own history).</p>
+     <div class="field">
+       <label>Trap Bar Deadlift training max (lb)</label>
+       <input class="set-input" style="width:100%" type="number" step="5" id="trapbar-tm-input" placeholder="e.g. ${oldDeadliftTm}" />
+     </div>
+     <div class="btn-row">
+       <button class="btn btn-primary btn-block" id="trapbar-tm-save">Save</button>
+     </div>
+     <div class="btn-row">
+       <button class="btn btn-block" id="trapbar-tm-skip">I'll set it later in Settings</button>
+     </div>`,
+    (root) => {
+      root.querySelector("#trapbar-tm-save").addEventListener("click", () => {
+        const value = Number(root.querySelector("#trapbar-tm-input").value);
+        if (value > 0) {
+          state.trainingMaxes.trapBarDeadlift = { currentValue: value, updatedAt: new Date().toISOString() };
+        }
+        state._trapBarTmPromptedV1 = true;
+        persist();
+        closeModal();
+        renderCurrentView();
+      });
+      root.querySelector("#trapbar-tm-skip").addEventListener("click", () => {
+        state._trapBarTmPromptedV1 = true;
+        persist();
         closeModal();
         renderCurrentView();
       });
@@ -866,3 +914,4 @@ subscribeRestTimer(({ remainingMs, label }) => {
 applyTheme();
 renderCurrentView();
 initCloudSync();
+promptTrapBarTmIfNeeded();

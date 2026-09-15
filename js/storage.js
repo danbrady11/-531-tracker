@@ -8,7 +8,7 @@ function defaultState() {
       barWeight: 45,
       roundingIncrement: 5,
       bbbPercentage: 0.5,
-      tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5 },
+      tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5, trapBarDeadlift: 10 },
       restTimerMainSec: 210,
       restTimerIsolationSec: 90,
       theme: "system", // 'system' | 'light' | 'dark'
@@ -22,6 +22,10 @@ function defaultState() {
       bench: { currentValue: 115, updatedAt: null },
       deadlift: { currentValue: 155, updatedAt: null },
       press: { currentValue: 75, updatedAt: null },
+      // Deliberately NOT defaulted from the old conventional deadlift TM —
+      // trap bar deadlift is a different lift with a different max, and
+      // app.js prompts for a real starting number the first time this loads.
+      trapBarDeadlift: { currentValue: 0, updatedAt: null },
     },
     cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
     sessionLogs: [],
@@ -40,6 +44,7 @@ function defaultState() {
 const ACCESSORY_RENAMES = {
   "Rear delt": "Reverse pec deck / cable reverse fly",
   "Face pulls": "Face pulls (optional)",
+  "Nordic curl": "Swiss ball leg curl",
 };
 
 function renameAccessoryEntries(accessorySets) {

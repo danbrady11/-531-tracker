@@ -1,7 +1,7 @@
 import { LIFTS } from "../calc.js";
 import { effectiveWeekCount } from "../state.js";
 
-const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
+const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press", trapBarDeadlift: "Trap Bar Deadlift" };
 
 function syncStatusLabel(sync) {
   if (sync.state === "syncing") return "Syncing…";

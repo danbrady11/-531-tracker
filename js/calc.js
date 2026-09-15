@@ -1,7 +1,7 @@
 // 5/3/1 math: percentages, plate math, warm-ups, e1RM.
 // Pure functions only — no DOM, no state — so this module can be tested in isolation.
 
-export const LIFTS = ["squat", "bench", "deadlift", "press"];
+export const LIFTS = ["squat", "bench", "deadlift", "press", "trapBarDeadlift"];
 
 export const WEEK_SCHEMES = {
   1: { label: "5s", sets: [{ pct: 0.65, reps: 5, amrap: false }, { pct: 0.75, reps: 5, amrap: false }, { pct: 0.85, reps: 5, amrap: true }], deload: false },
