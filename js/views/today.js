@@ -1,9 +1,17 @@
-import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM } from "../program.js";
+import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
 import { lastAccessoryLog, effectiveWeekCount } from "../state.js";
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function formatSec(seconds) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function restButtonHtml(seconds, label) {
+  return `<button class="btn btn-sm" data-action="start-timer" data-seconds="${seconds}" data-label="${escapeHtml(label)}">Rest ${formatSec(seconds)}</button>`;
 }
 
 function plateStripText(weight, barWeight) {
@@ -107,7 +115,24 @@ function checkableAccessoryRow(accessory, session) {
     </div>`;
 }
 
-function accessoryBlock(accessory, session, sessionLogs) {
+/**
+ * Rest control under an accessory's sets: a normal per-category Rest button,
+ * unless the exercise is part of a superset pair — the "a" exercise gets no
+ * rest control at all (advance straight to "b"), and "b" gets no manual
+ * button either, since its rest starts automatically the moment a set is
+ * logged (see actions.toggleAccessorySet in app.js).
+ */
+function accessoryRestControl(accessory, restTimerSec) {
+  if (accessory.supersetRole === "a") {
+    return `<div class="set-meta">Superset — go straight into the next exercise, no rest.</div>`;
+  }
+  if (accessory.supersetRole === "b") {
+    return `<div class="set-meta">Superset — ${formatSec(restTimerSec.superset)} rest starts automatically once a set is logged.</div>`;
+  }
+  return restButtonHtml(restTimerSec[restCategoryFor(accessory)], `${accessory.name} rest`);
+}
+
+function accessoryBlock(accessory, session, sessionLogs, restTimerSec) {
   if (accessory.sets == null) return checkableAccessoryRow(accessory, session);
 
   const entries = (session.accessorySets || []).filter((s) => s.exerciseName === accessory.name);
@@ -122,6 +147,7 @@ function accessoryBlock(accessory, session, sessionLogs) {
       </div>
       ${accessory.cue ? `<div class="accessory-cue">${escapeHtml(accessory.cue)}</div>` : ""}
       <div class="accessory-sets">${chips}</div>
+      <div class="btn-row" style="margin-top:8px;">${accessoryRestControl(accessory, restTimerSec)}</div>
     </div>`;
 }
 
@@ -168,16 +194,16 @@ function shoulderRehabBlock(session) {
 }
 
 /** Psoas Strength: logged like a normal accessory (weight/band level + reps, prefilled). */
-function psoasStrengthBlock(session, sessionLogs) {
+function psoasStrengthBlock(session, sessionLogs, restTimerSec) {
   return `
     <div class="card">
       <h3>Psoas Strength</h3>
-      ${PSOAS_STRENGTH.map((a) => accessoryBlock(a, session, sessionLogs)).join("")}
+      ${PSOAS_STRENGTH.map((a) => accessoryBlock(a, session, sessionLogs, restTimerSec)).join("")}
     </div>`;
 }
 
-/** An exercise added ad hoc to just this session — not part of the day's fixed list. */
-function extraAccessoryBlock(exerciseName, session, sessionLogs) {
+/** An exercise added ad hoc to just this session — not part of the day's fixed list, so it always gets the isolation-rest default. */
+function extraAccessoryBlock(exerciseName, session, sessionLogs, restTimerSec) {
   const entries = (session.accessorySets || []).filter((s) => s.exerciseName === exerciseName);
   const chips = entries
     .map((entry, i) => accessorySetChip(exerciseName, entry.setIndex ?? i, entry, lastAccessoryLog(sessionLogs, exerciseName, entry.setIndex ?? i)))
@@ -189,6 +215,7 @@ function extraAccessoryBlock(exerciseName, session, sessionLogs) {
         <button class="btn btn-sm btn-ghost" data-action="remove-ad-hoc" data-exercise="${escapeHtml(exerciseName)}" aria-label="Remove exercise">Remove</button>
       </div>
       <div class="accessory-sets">${chips}</div>
+      <div class="btn-row" style="margin-top:8px;">${restButtonHtml(restTimerSec.isolation, `${exerciseName} rest`)}</div>
     </div>`;
 }
 
@@ -282,6 +309,7 @@ function renderWorkoutScreen(root, ctx) {
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
   const weekCount = effectiveWeekCount(cycleNumber, state.settings);
+  const restTimerSec = state.settings.restTimerSec;
 
   let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;
   html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of 6</div>`;
@@ -298,7 +326,7 @@ function renderWorkoutScreen(root, ctx) {
       <h3>Main sets — TM ${tm} lb</h3>
       ${session.mainSets.map((s, i) => mainSetRow(s, i, bar)).join("")}
       <div class="btn-row">
-        <button class="btn btn-sm" data-action="start-timer" data-seconds="${state.settings.restTimerMainSec}" data-label="Main set rest">Rest ${Math.round(state.settings.restTimerMainSec / 60)}:${String(state.settings.restTimerMainSec % 60).padStart(2, "0")}</button>
+        ${restButtonHtml(restTimerSec.main, "Main set rest")}
         <button class="btn btn-sm btn-ghost" data-action="toggle-warmup">Warm-ups</button>
       </div>
       <div id="warmup-panel" hidden></div>
@@ -309,6 +337,7 @@ function renderWorkoutScreen(root, ctx) {
       html += `<div class="card">
         <h3>${label}</h3>
         ${session.supplementalSets.map((s, i) => supplementalRow(s, i, day.supplemental, bar)).join("")}
+        <div class="btn-row">${restButtonHtml(restTimerSec.main, `${label} rest`)}</div>
       </div>`;
     }
   } else {
@@ -322,16 +351,13 @@ function renderWorkoutScreen(root, ctx) {
 
   html += `<div class="card">
     <h3>Accessories</h3>
-    ${day.accessories.map((a) => accessoryBlock(a, session, state.sessionLogs)).join("")}
-    ${extraNames.map((name) => extraAccessoryBlock(name, session, state.sessionLogs)).join("")}
-    <div class="btn-row">
-      <button class="btn btn-sm" data-action="start-timer" data-seconds="${state.settings.restTimerIsolationSec}" data-label="Isolation rest">Rest ${Math.round(state.settings.restTimerIsolationSec / 60)}:${String(state.settings.restTimerIsolationSec % 60).padStart(2, "0")}</button>
-    </div>
+    ${day.accessories.map((a) => accessoryBlock(a, session, state.sessionLogs, restTimerSec)).join("")}
+    ${extraNames.map((name) => extraAccessoryBlock(name, session, state.sessionLogs, restTimerSec)).join("")}
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
     ${addExerciseControls(state.customExercises || [])}
   </div>`;
 
-  if (day.hasPsoasStrength) html += psoasStrengthBlock(session, state.sessionLogs);
+  if (day.hasPsoasStrength) html += psoasStrengthBlock(session, state.sessionLogs, restTimerSec);
 
   html += `<div class="card notes-field">
     <h3>Notes</h3>

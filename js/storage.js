@@ -9,8 +9,11 @@ function defaultState() {
       roundingIncrement: 5,
       bbbPercentage: 0.5,
       tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5, trapBarDeadlift: 10 },
-      restTimerMainSec: 210,
-      restTimerIsolationSec: 90,
+      // Rest between sets, by exercise category — editable in Settings so a
+      // duration change never needs a code change. "superset" is the rest
+      // taken only after the "b" exercise of a superset pair, since there's
+      // deliberately no rest between "a" and "b" themselves.
+      restTimerSec: { main: 180, compound: 90, isolation: 60, superset: 60 },
       theme: "system", // 'system' | 'light' | 'dark'
       // When true (the default), only even-numbered cycles (2, 4, 6, ...) run
       // a week-4 deload; odd-numbered cycles end after week 3 and roll
@@ -80,9 +83,13 @@ export function migrate(state) {
     cycleState: { ...base.cycleState, ...(state.cycleState || {}) },
   };
   merged.settings.tmIncrements = { ...base.settings.tmIncrements, ...(state.settings?.tmIncrements || {}) };
+  merged.settings.restTimerSec = { ...base.settings.restTimerSec, ...(state.settings?.restTimerSec || {}) };
   // Superseded by deloadOnEvenCyclesOnly (with flipped parity) — drop the
   // stale key so old exports/synced state don't carry dead settings forward.
   delete merged.settings.deloadEveryOtherCycle;
+  // Superseded by restTimerSec's per-category durations.
+  delete merged.settings.restTimerMainSec;
+  delete merged.settings.restTimerIsolationSec;
   for (const lift of LIFTS) {
     merged.trainingMaxes[lift] = { ...base.trainingMaxes[lift], ...(state.trainingMaxes?.[lift] || {}) };
   }

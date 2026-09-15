@@ -22,6 +22,26 @@ test("migrate preserves an explicit deloadOnEvenCyclesOnly: false", () => {
   assert.equal(migrated.settings.deloadOnEvenCyclesOnly, false);
 });
 
+test("migrate defaults restTimerSec per category for a brand-new state", () => {
+  const migrated = migrate({});
+  assert.deepEqual(migrated.settings.restTimerSec, { main: 180, compound: 90, isolation: 60, superset: 60 });
+});
+
+test("migrate drops the superseded flat restTimerMainSec/restTimerIsolationSec keys", () => {
+  const migrated = migrate({ settings: { restTimerMainSec: 210, restTimerIsolationSec: 90 } });
+  assert.equal("restTimerMainSec" in migrated.settings, false);
+  assert.equal("restTimerIsolationSec" in migrated.settings, false);
+  assert.deepEqual(migrated.settings.restTimerSec, { main: 180, compound: 90, isolation: 60, superset: 60 });
+});
+
+test("migrate preserves a customized restTimerSec category, filling in the rest", () => {
+  const migrated = migrate({ settings: { restTimerSec: { main: 200 } } });
+  assert.equal(migrated.settings.restTimerSec.main, 200);
+  assert.equal(migrated.settings.restTimerSec.compound, 90);
+  assert.equal(migrated.settings.restTimerSec.isolation, 60);
+  assert.equal(migrated.settings.restTimerSec.superset, 60);
+});
+
 test("migrate defaults trapBarDeadlift TM to 0 for an existing user, not copied from deadlift", () => {
   const migrated = migrate({ trainingMaxes: { deadlift: { currentValue: 225, updatedAt: "2026-01-01" } } });
   assert.equal(migrated.trainingMaxes.deadlift.currentValue, 225);

@@ -3,6 +3,13 @@ import { effectiveWeekCount } from "../state.js";
 
 const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press", trapBarDeadlift: "Trap Bar Deadlift" };
 
+const REST_TIMER_CATEGORIES = [
+  { key: "main", label: "Main lift / BBB" },
+  { key: "compound", label: "Compound accessory" },
+  { key: "isolation", label: "Isolation accessory" },
+  { key: "superset", label: "Superset (after \"b\")" },
+];
+
 function syncStatusLabel(sync) {
   if (sync.state === "syncing") return "Syncing…";
   if (sync.state === "error") return sync.message || "Sync error";
@@ -77,16 +84,6 @@ export function renderSettings(root, ctx) {
         <label>BBB percentage of TM (%)</label>
         <input class="set-input" style="width:100%" type="number" step="5" value="${Math.round(s.bbbPercentage * 100)}" data-action="setting-pct" data-key="bbbPercentage" />
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Main set rest (sec)</label>
-          <input class="set-input" style="width:100%" type="number" step="15" value="${s.restTimerMainSec}" data-action="setting" data-key="restTimerMainSec" />
-        </div>
-        <div class="field">
-          <label>Isolation rest (sec)</label>
-          <input class="set-input" style="width:100%" type="number" step="15" value="${s.restTimerIsolationSec}" data-action="setting" data-key="restTimerIsolationSec" />
-        </div>
-      </div>
       <div class="field">
         <label>Theme</label>
         <select data-action="setting" data-key="theme">
@@ -105,6 +102,20 @@ export function renderSettings(root, ctx) {
           <div class="field">
             <label>${LIFT_LABELS[lift]}</label>
             <input class="set-input" style="width:100%" type="number" step="2.5" value="${s.tmIncrements[lift]}" data-action="setting-tm-inc" data-lift="${lift}" />
+          </div>`
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Rest timers (sec)</h3>
+      <div class="set-meta" style="margin-bottom:8px;">How long each Rest button counts down. Superset rest only ever starts automatically, after a "b" exercise's set is logged.</div>
+      <div class="field-row">
+        ${REST_TIMER_CATEGORIES.map(
+          ({ key, label }) => `
+          <div class="field">
+            <label>${label}</label>
+            <input class="set-input" style="width:100%" type="number" step="5" value="${s.restTimerSec[key]}" data-action="setting-rest" data-category="${key}" />
           </div>`
         ).join("")}
       </div>
@@ -175,6 +186,9 @@ export function renderSettings(root, ctx) {
   );
   root.querySelectorAll('[data-action="setting-tm-inc"]').forEach((el) =>
     el.addEventListener("change", () => ctx.actions.setTmIncrement(el.dataset.lift, Number(el.value)))
+  );
+  root.querySelectorAll('[data-action="setting-rest"]').forEach((el) =>
+    el.addEventListener("change", () => ctx.actions.setRestTimerSec(el.dataset.category, Number(el.value)))
   );
   root.querySelectorAll('[data-action="setting-checkbox"]').forEach((el) =>
     el.addEventListener("change", () => ctx.actions.setSetting(el.dataset.key, el.checked))

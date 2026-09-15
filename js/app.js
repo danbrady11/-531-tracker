@@ -1,7 +1,7 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
-import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH } from "./program.js";
+import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
@@ -614,6 +614,14 @@ const actions = {
       const prefill = lastAccessoryLog(state.sessionLogs, exerciseName, setIndex);
       if (entry.weight == null && prefill?.weight != null) entry.weight = prefill.weight;
       if (entry.reps == null && prefill?.reps != null) entry.reps = prefill.reps;
+      // Superset "b" exercises skip the manual Rest button entirely — the
+      // rest only ever comes after "b", so start it the moment its set is
+      // logged rather than waiting for a separate tap (the "a" exercise
+      // never starts one at all; see accessoryRestControl in today.js).
+      const def = accessoryDefFor(state.currentSession.dayIndex, exerciseName);
+      if (def?.supersetRole === "b") {
+        startRestTimer(state.settings.restTimerSec.superset, `${exerciseName} rest`);
+      }
     }
     persist();
     renderCurrentView();
@@ -777,6 +785,10 @@ const actions = {
   },
   setTmIncrement(lift, value) {
     state.settings.tmIncrements[lift] = value;
+    persist();
+  },
+  setRestTimerSec(category, value) {
+    state.settings.restTimerSec[category] = value;
     persist();
   },
   addBodyweightEntry(date, weight) {

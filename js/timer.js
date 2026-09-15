@@ -35,7 +35,7 @@ function tickLoop() {
     notify();
     if (remaining <= 0) {
       stopLoop();
-      onExpire();
+      fireExpiryIfNeeded();
     }
   }, 250);
 }
@@ -47,12 +47,49 @@ function stopLoop() {
   }
 }
 
-function onExpire() {
+// A backgrounded/screen-locked tab can have its interval throttled or fully
+// suspended, so the countdown can reach zero without this ever running at
+// the right moment. Guarding on state.notified means whichever path notices
+// first — this interval, the visibilitychange catch-up, or the page just
+// loading onto an already-expired timer — fires the alert exactly once.
+function fireExpiryIfNeeded() {
+  const state = readTimerState();
+  if (!state || state.notified) return;
+  writeTimerState({ ...state, notified: true });
+  onExpire(state.label);
+}
+
+function onExpire(label) {
   try {
     if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
   } catch {}
   beep();
+  notifyOS(label);
   releaseWakeLock();
+}
+
+// Local (non-push) notification via the service worker, which is the
+// supported path for installed/home-screen PWAs (including iOS 16.4+) —
+// plain `new Notification()` isn't reliably available in that context.
+function notifyOS(label) {
+  try {
+    if (!("serviceWorker" in navigator) || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification("Rest complete", { body: label || "Time for your next set", tag: "531-rest-timer" }))
+      .catch(() => {});
+  } catch {}
+}
+
+let notificationPermissionRequested = false;
+// Only meaningful from a user-gesture call stack (a tap that starts a rest
+// timer qualifies); requesting from anywhere else is silently ignored by
+// most browsers anyway.
+function ensureNotificationPermission() {
+  try {
+    if (typeof Notification === "undefined" || notificationPermissionRequested) return;
+    notificationPermissionRequested = true;
+    if (Notification.permission === "default") Notification.requestPermission();
+  } catch {}
 }
 
 function beep() {
@@ -94,8 +131,9 @@ function releaseWakeLock() {
 
 export function startRestTimer(seconds, label = "") {
   const now = Date.now();
-  const state = { endAt: now + seconds * 1000, totalMs: seconds * 1000, label };
+  const state = { endAt: now + seconds * 1000, totalMs: seconds * 1000, label, notified: false };
   writeTimerState(state);
+  ensureNotificationPermission();
   acquireWakeLock();
   tickLoop();
   notify();
@@ -132,13 +170,22 @@ export function formatMs(ms) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// Resume ticking on load if a timer was already running (e.g. page reload mid-rest).
+// Resume ticking on load if a timer was already running (e.g. page reload
+// mid-rest); if it fully elapsed while the page was closed or hidden
+// instead, fire the missed alert now rather than silently dropping it.
 if (typeof window !== "undefined") {
-  if (isRestTimerActive()) tickLoop();
+  if (isRestTimerActive()) {
+    tickLoop();
+  } else {
+    fireExpiryIfNeeded();
+  }
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && isRestTimerActive()) {
+    if (document.visibilityState !== "visible") return;
+    if (isRestTimerActive()) {
       acquireWakeLock();
-      notify();
+    } else {
+      fireExpiryIfNeeded();
     }
+    notify();
   });
 }
