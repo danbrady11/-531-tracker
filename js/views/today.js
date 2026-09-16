@@ -334,10 +334,13 @@ function renderWorkoutScreen(root, ctx) {
 
     if (day.supplemental) {
       const label = day.supplemental === "fsl" ? "FSL 3×8" : `BBB 5×10 (${Math.round(state.settings.bbbPercentage * 100)}%)`;
+      // Falls back to "main" for FSL, which no day currently uses and has no
+      // rest duration of its own in Settings — only BBB was asked for.
+      const suppRestSec = restTimerSec[day.supplemental] ?? restTimerSec.main;
       html += `<div class="card">
         <h3>${label}</h3>
         ${session.supplementalSets.map((s, i) => supplementalRow(s, i, day.supplemental, bar)).join("")}
-        <div class="btn-row">${restButtonHtml(restTimerSec.main, `${label} rest`)}</div>
+        <div class="btn-row">${restButtonHtml(suppRestSec, `${label} rest`)}</div>
       </div>`;
     }
   } else {

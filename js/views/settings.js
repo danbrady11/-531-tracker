@@ -4,7 +4,8 @@ import { effectiveWeekCount } from "../state.js";
 const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press", trapBarDeadlift: "Trap Bar Deadlift" };
 
 const REST_TIMER_CATEGORIES = [
-  { key: "main", label: "Main lift / BBB" },
+  { key: "main", label: "Main lift" },
+  { key: "bbb", label: "BBB" },
   { key: "compound", label: "Compound accessory" },
   { key: "isolation", label: "Isolation accessory" },
   { key: "superset", label: "Superset (after \"b\")" },

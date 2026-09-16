@@ -13,7 +13,7 @@ function defaultState() {
       // duration change never needs a code change. "superset" is the rest
       // taken only after the "b" exercise of a superset pair, since there's
       // deliberately no rest between "a" and "b" themselves.
-      restTimerSec: { main: 180, compound: 90, isolation: 60, superset: 60 },
+      restTimerSec: { main: 180, bbb: 90, compound: 90, isolation: 60, superset: 60 },
       theme: "system", // 'system' | 'light' | 'dark'
       // When true (the default), only even-numbered cycles (2, 4, 6, ...) run
       // a week-4 deload; odd-numbered cycles end after week 3 and roll

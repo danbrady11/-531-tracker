@@ -29,3 +29,12 @@ test("restCategoryFor defaults to isolation when untagged or missing", () => {
   assert.equal(restCategoryFor({ name: "Curls" }), "isolation");
   assert.equal(restCategoryFor(null), "isolation");
 });
+
+test("Lateral raise / Reverse pec deck are always a superset pair, on every day both appear", () => {
+  for (const dayIndex of [1, 3, 5]) {
+    const lateral = accessoryDefFor(dayIndex, "Lateral raise");
+    const reverseFly = accessoryDefFor(dayIndex, "Reverse pec deck / cable reverse fly");
+    assert.equal(lateral?.supersetRole, "a", `day ${dayIndex} Lateral raise`);
+    assert.equal(reverseFly?.supersetRole, "b", `day ${dayIndex} Reverse pec deck / cable reverse fly`);
+  }
+});
