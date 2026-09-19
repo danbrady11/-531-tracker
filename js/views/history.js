@@ -1,6 +1,6 @@
-import { bodyweightRollingAverage, combinedLiftMetricSeries } from "../state.js";
+import { bodyweightRollingAverage, combinedLiftMetricSeries, parseBulkWeightEntries } from "../state.js";
 import { drawLineChart, drawMultiLineChart } from "../chart.js";
-import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
+import { LIFT_META, CHART_LIFT_ORDER } from "../lift-meta.js";
 
 function shortDate(iso) {
   const d = new Date(iso);
@@ -39,6 +39,13 @@ export function renderHistory(root, ctx) {
       <button class="btn btn-primary btn-block" id="bw-add">Log weight</button>
       <div class="chart-wrap" style="margin-top:14px;"><canvas class="chart-canvas" id="bw-chart"></canvas></div>
       <div id="bw-list" style="margin-top:8px;"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
+      <div class="field">
+        <label>Bulk add (one per line: YYYY-MM-DD weight)</label>
+        <textarea id="bw-bulk" style="width:100%;min-height:100px;" placeholder="2026-09-19 230.2"></textarea>
+      </div>
+      <button class="btn btn-sm" id="bw-bulk-add">Add all</button>
+      <div id="bw-bulk-result" class="set-meta" style="margin-top:6px;"></div>
     </div>
   `;
 
@@ -58,12 +65,22 @@ export function renderHistory(root, ctx) {
     if (!weight || !date) return;
     ctx.actions.addBodyweightEntry(new Date(date).toISOString(), weight);
   });
+
+  root.querySelector("#bw-bulk-add")?.addEventListener("click", () => {
+    const textarea = root.querySelector("#bw-bulk");
+    const entries = parseBulkWeightEntries(textarea.value);
+    if (!entries.length) {
+      root.querySelector("#bw-bulk-result").textContent = "No valid lines found — expected \"YYYY-MM-DD weight\" per line.";
+      return;
+    }
+    ctx.actions.addBodyweightEntries(entries);
+  });
 }
 
 function renderLiftChart(root, state) {
   const { xLabels, series } = combinedLiftMetricSeries(state.sessionLogs, liftMetric);
   const canvas = root.querySelector("#lift-chart");
-  const orderedSeries = LIFT_ORDER.map((lift) => series.find((s) => s.lift === lift)).filter(Boolean);
+  const orderedSeries = CHART_LIFT_ORDER.map((lift) => series.find((s) => s.lift === lift)).filter(Boolean);
   const hasData = orderedSeries.some((s) => s.values.some((v) => v != null));
 
   canvas.hidden = !hasData;
@@ -78,7 +95,7 @@ function renderLiftChart(root, state) {
     ? ""
     : `<div class="empty-state">No main-lift sessions logged yet.</div>`;
 
-  root.querySelector("#lift-legend").innerHTML = LIFT_ORDER.map(
+  root.querySelector("#lift-legend").innerHTML = CHART_LIFT_ORDER.map(
     (lift) =>
       `<span class="legend-item"><span class="legend-swatch" style="background:var(${LIFT_META[lift].colorVar})"></span>${LIFT_META[lift].label}</span>`
   ).join("");

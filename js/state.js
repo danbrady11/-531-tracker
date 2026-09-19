@@ -113,6 +113,25 @@ export function lastCompletedByLift(sessionLogs) {
   return result;
 }
 
+/**
+ * Parses pasted bodyweight lines for bulk import, one entry per line as
+ * "YYYY-MM-DD weight" (e.g. "2026-09-19 230.2"). Blank lines and anything
+ * that doesn't match are silently skipped rather than throwing, since this
+ * is meant for pasting a batch copied from elsewhere (a health app export,
+ * a notes list) that may have stray formatting.
+ */
+export function parseBulkWeightEntries(text) {
+  const entries = [];
+  for (const line of text.split("\n")) {
+    const match = line.trim().match(/^(\d{4}-\d{2}-\d{2})\s+([\d.]+)$/);
+    if (!match) continue;
+    const weight = Number(match[2]);
+    if (!weight) continue;
+    entries.push({ date: new Date(match[1]).toISOString(), weight });
+  }
+  return entries;
+}
+
 /** Weekly rolling average bodyweight: buckets entries into trailing 7-day windows ending on each entry's date. */
 export function bodyweightRollingAverage(entries) {
   const sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift } from "./state.js";
+import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -137,4 +137,22 @@ test("lastCompletedByLift: ignores skipped sessions and picks the most recent by
     logWithLift("press", 1, 1, "2026-01-01T00:00:00Z", true),
   ];
   assert.deepEqual(lastCompletedByLift(logs), { press: { cycleNumber: 1, weekIndex: 3, date: "2026-01-10T00:00:00Z" } });
+});
+
+test("parseBulkWeightEntries: parses one 'YYYY-MM-DD weight' entry per line", () => {
+  const entries = parseBulkWeightEntries("2026-09-01 223.8\n2026-09-19 230.2");
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].weight, 223.8);
+  assert.equal(new Date(entries[0].date).toISOString().slice(0, 10), "2026-09-01");
+  assert.equal(entries[1].weight, 230.2);
+});
+
+test("parseBulkWeightEntries: skips blank lines and unparseable garbage without throwing", () => {
+  const entries = parseBulkWeightEntries("2026-09-01 223.8\n\n   \nnot a valid line\n2026-09-02 225");
+  assert.equal(entries.length, 2);
+  assert.equal(entries[1].weight, 225);
+});
+
+test("parseBulkWeightEntries: empty input returns an empty array", () => {
+  assert.deepEqual(parseBulkWeightEntries(""), []);
 });

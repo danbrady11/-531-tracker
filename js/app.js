@@ -796,6 +796,13 @@ const actions = {
     persist();
     renderCurrentView();
   },
+  addBodyweightEntries(entries) {
+    if (!entries.length) return;
+    state.bodyweightEntries.push(...entries);
+    persist();
+    showToast(`Added ${entries.length} weigh-in${entries.length === 1 ? "" : "s"}`);
+    renderCurrentView();
+  },
   exportJSON() {
     const blob = new Blob([exportStateJSON(state)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
