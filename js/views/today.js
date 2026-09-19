@@ -1,6 +1,6 @@
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
-import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift } from "../state.js";
+import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle } from "../state.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
 
 function escapeHtml(s) {
@@ -246,13 +246,21 @@ function addExerciseControls(customExercises) {
 
 const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
 
-/** Per-lift "last time you actually trained it" strip for the splash screen. Skips a lift entirely if it has no completed history yet. */
-function liftStatusHtml(sessionLogs) {
+/**
+ * Per-lift "when you'll next train it" strip for the splash screen: one step
+ * past its most recent completed session, reusing advanceCycle's own
+ * week/cycle-wrap logic (dayIndex: DAY_COUNT forces it to treat this as the
+ * last day of that week, which is all that's needed to land on the correct
+ * next week — or next cycle's week 1, if that was the cycle's last week).
+ * Skips a lift entirely if it has no completed history yet.
+ */
+function liftStatusHtml(sessionLogs, settings) {
   const lastByLift = lastCompletedByLift(sessionLogs);
   const rows = LIFT_ORDER.filter((lift) => lastByLift[lift])
     .map((lift) => {
       const info = lastByLift[lift];
-      return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${info.cycleNumber}:W${info.weekIndex} complete</span></div>`;
+      const { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings);
+      return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${cycleState.cycleNumber}:W${cycleState.weekIndex} next</span></div>`;
     })
     .join("");
   return rows ? `<div class="card"><h3>Lift Status</h3>${rows}</div>` : "";
@@ -293,7 +301,7 @@ function renderSplashScreen(root, ctx) {
       <div class="set-meta">${DAY_KIND_LABEL[day.kind]}</div>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
     </div>
-    ${liftStatusHtml(state.sessionLogs)}
+    ${liftStatusHtml(state.sessionLogs, state.settings)}
     <div class="section-label">Or pick a different day</div>
     <div class="card splash-other-days">${otherDaysHtml}</div>
   `;
