@@ -42,9 +42,10 @@ export const DAYS = {
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
+      { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
-      { name: "Overhead tricep extension", sets: 3, repsLabel: "12" },
+      { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Curls", sets: 3, repsLabel: "12" },
     ],
   },
@@ -86,7 +87,7 @@ export const DAYS = {
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
       { name: "Incline DB press", sets: 3, repsLabel: "10–12", restCategory: "compound" },
-      { name: "Overhead tricep extension", sets: 3, repsLabel: "12" },
+      { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Hammer curls", sets: 3, repsLabel: "12" },
     ],
   },

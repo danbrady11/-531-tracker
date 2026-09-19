@@ -48,6 +48,7 @@ const ACCESSORY_RENAMES = {
   "Rear delt": "Reverse pec deck / cable reverse fly",
   "Face pulls": "Face pulls (optional)",
   "Nordic curl": "Swiss ball leg curl",
+  "Overhead tricep extension": "Cable rope overhead extension",
 };
 
 function renameAccessoryEntries(accessorySets) {

@@ -72,6 +72,14 @@ test("migrate renames 'Nordic curl' history to 'Swiss ball leg curl'", () => {
   assert.equal(migrated.sessionLogs[0].accessorySets[0].exerciseName, "Swiss ball leg curl");
 });
 
+test("migrate renames 'Overhead tricep extension' history to 'Cable rope overhead extension'", () => {
+  const state = {
+    sessionLogs: [sessionWith([{ exerciseName: "Overhead tricep extension", setIndex: 0, weight: 30, reps: 12, completed: true }])],
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.sessionLogs[0].accessorySets[0].exerciseName, "Cable rope overhead extension");
+});
+
 test("migrate renames 'Rear delt' history to 'Reverse pec deck / cable reverse fly'", () => {
   const state = {
     sessionLogs: [sessionWith([{ exerciseName: "Rear delt", setIndex: 0, weight: 20, reps: 15, completed: true }])],
