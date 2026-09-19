@@ -108,9 +108,9 @@ export const DAYS = {
     ],
   },
   6: {
-    name: "Trap Bar Deadlift",
+    name: "Deadlift",
     kind: "main",
-    lift: "trapBarDeadlift",
+    lift: "deadlift",
     supplemental: "bbb",
     hasPsoasStrength: false,
     hasShoulderRehab: false,
