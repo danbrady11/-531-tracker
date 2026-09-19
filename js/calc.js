@@ -71,6 +71,25 @@ export function epleyE1RM(weight, reps) {
   return weight * (1 + reps / 30);
 }
 
+/**
+ * Minimum whole reps at `weight` needed for Epley's e1RM to exceed
+ * `currentBestE1RM` — the inverse of epleyE1RM, solved for reps and rounded
+ * up to the next whole rep so a tie never counts as "beating" it. Returns 1
+ * when there's no prior best (anything logged would be a new one) or no
+ * weight to compute against.
+ */
+export function repsToBeatE1RM(weight, currentBestE1RM) {
+  if (!weight || !currentBestE1RM || currentBestE1RM <= 0) return 1;
+  const raw = 30 * (currentBestE1RM / weight - 1);
+  // A real tie (e.g. 95 lb x 16 reps landing on exactly the same e1RM as a
+  // prior 115 lb x 8) can compute as 15.999999999999996 instead of 16 due to
+  // floating-point error, which would floor to one rep short of correct.
+  // Rounding to 6 decimals first is far finer than a rep count needs, so it
+  // only ever cancels that noise, never a genuine fractional difference.
+  const rounded = Math.round(raw * 1e6) / 1e6;
+  return Math.max(1, Math.floor(rounded) + 1);
+}
+
 const STANDARD_PLATES = [45, 35, 25, 10, 5, 2.5, 1.25];
 
 /**

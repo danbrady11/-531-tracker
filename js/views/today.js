@@ -1,6 +1,6 @@
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
-import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
-import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle } from "../state.js";
+import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
+import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle, amrapHistory } from "../state.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
 
 function escapeHtml(s) {
@@ -30,7 +30,15 @@ function e1rmText(weight, reps) {
   return `Est. 1RM ${Math.round(epleyE1RM(weight, reps))} lb`;
 }
 
-function mainSetRow(set, index, barWeight) {
+/** Text for the AMRAP set's "reps needed for a new e1RM" hint, at a given weight. */
+function prHintText(weight, bestE1RM) {
+  if (!weight) return "";
+  if (!bestE1RM) return "No est. 1RM on record yet for this lift — any logged rep sets one.";
+  const repsNeeded = repsToBeatE1RM(weight, bestE1RM);
+  return `${repsNeeded}+ reps beats your current est. 1RM (${Math.round(bestE1RM)} lb)`;
+}
+
+function mainSetRow(set, index, barWeight, bestE1RM) {
   const doneClass = set.completed ? "done" : "";
   const amrapClass = set.isAmrap ? "amrap" : "";
   const pct = Math.round(set.percentage * 100);
@@ -50,7 +58,8 @@ function mainSetRow(set, index, barWeight) {
         <div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>
         ${
           set.isAmrap
-            ? `<div class="e1rm-line" data-e1rm-index="${index}">${e1rmText(set.weight, set.actualReps)}</div>`
+            ? `<div class="e1rm-line" data-e1rm-index="${index}">${e1rmText(set.weight, set.actualReps)}</div>
+               <div class="pr-hint" data-pr-index="${index}" data-best-e1rm="${bestE1RM}">${prHintText(set.weight, bestE1RM)}</div>`
             : ""
         }
       </div>
@@ -344,9 +353,13 @@ function renderWorkoutScreen(root, ctx) {
 
   if (isMainDay) {
     const tm = state.trainingMaxes[day.lift].currentValue;
+    // Best e1RM from prior completed sessions only — today's own AMRAP
+    // result isn't in state.sessionLogs yet, so this is exactly "what do I
+    // need to beat," not a number that shifts as they log today's reps.
+    const bestE1RM = Math.max(0, ...amrapHistory(state.sessionLogs, day.lift).map((h) => h.e1rm));
     html += `<div class="card">
       <h3>Main sets — TM ${tm} lb</h3>
-      ${session.mainSets.map((s, i) => mainSetRow(s, i, bar)).join("")}
+      ${session.mainSets.map((s, i) => mainSetRow(s, i, bar, bestE1RM)).join("")}
       <div class="btn-row">
         ${restButtonHtml(restTimerSec.main, "Main set rest")}
         <button class="btn btn-sm btn-ghost" data-action="toggle-warmup">Warm-ups</button>
@@ -437,7 +450,11 @@ function wireActions(root, ctx) {
     if (!line) return;
     const weightInput = root.querySelector(`[data-action="main-weight"][data-index="${index}"]`);
     const repsInput = root.querySelector(`[data-action="amrap-reps"][data-index="${index}"]`);
-    line.textContent = e1rmText(Number(weightInput?.value), Number(repsInput?.value));
+    const weight = Number(weightInput?.value);
+    line.textContent = e1rmText(weight, Number(repsInput?.value));
+
+    const prHint = root.querySelector(`[data-pr-index="${index}"]`);
+    if (prHint) prHint.textContent = prHintText(weight, Number(prHint.dataset.bestE1rm));
   };
 
   root.querySelectorAll('[data-action="main-weight"]').forEach((el) => {

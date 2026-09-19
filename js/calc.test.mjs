@@ -9,6 +9,7 @@ import {
   bbbSets,
   warmupSets,
   epleyE1RM,
+  repsToBeatE1RM,
   plateBreakdown,
   nextTrainingMax,
   fslPercentage,
@@ -113,6 +114,37 @@ test("epleyE1RM: standard formula", () => {
   assert.ok(Math.abs(epleyE1RM(200, 5) - 233.333) < 0.01);
   assert.equal(epleyE1RM(0, 5), 0);
   assert.equal(epleyE1RM(200, 0), 0);
+});
+
+test("repsToBeatE1RM: no prior best means 1 rep already counts", () => {
+  assert.equal(repsToBeatE1RM(200, 0), 1);
+  assert.equal(repsToBeatE1RM(0, 0), 1);
+});
+
+test("repsToBeatE1RM: exact boundary requires one more rep than a tie", () => {
+  // epleyE1RM(115, 3) = 126.5 exactly, so 3 reps ties the record, not beats it.
+  const currentBest = epleyE1RM(115, 3);
+  assert.equal(repsToBeatE1RM(115, currentBest), 4);
+  assert.ok(epleyE1RM(115, 3) <= currentBest);
+  assert.ok(epleyE1RM(115, 4) > currentBest);
+});
+
+test("repsToBeatE1RM: a tie reached at a different weight isn't miscounted as beating it (floating-point regression)", () => {
+  // epleyE1RM(115, 8) === epleyE1RM(95, 16) exactly, in real arithmetic —
+  // but 30 * (epleyE1RM(115,8) / 95 - 1) computes as 15.999999999999996 in
+  // floating point, which would floor to 16 (a tie) instead of the correct 17.
+  const currentBest = epleyE1RM(115, 8);
+  assert.equal(epleyE1RM(95, 16), currentBest); // confirms this is a genuine tie, not just close
+  assert.equal(repsToBeatE1RM(95, currentBest), 17);
+  assert.ok(epleyE1RM(95, 17) > currentBest);
+});
+
+test("repsToBeatE1RM: matches epleyE1RM's own inverse for a non-boundary case", () => {
+  const currentBest = 233; // just under epleyE1RM(200,5) = 233.33
+  const needed = repsToBeatE1RM(200, currentBest);
+  assert.equal(needed, 5);
+  assert.ok(epleyE1RM(200, needed) > currentBest);
+  assert.ok(epleyE1RM(200, needed - 1) <= currentBest);
 });
 
 test("plateBreakdown: simple case, 225 total, 45 bar -> 90/side -> two 45s", () => {

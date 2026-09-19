@@ -283,6 +283,13 @@ input, select, textarea {
   min-height: 1.1em;
 }
 
+.pr-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  min-height: 1.1em;
+}
+
 .set-input {
   width: 58px;
   height: 40px;
