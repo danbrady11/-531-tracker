@@ -1,6 +1,7 @@
 import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM } from "../calc.js";
-import { lastAccessoryLog, effectiveWeekCount } from "../state.js";
+import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift } from "../state.js";
+import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -245,6 +246,18 @@ function addExerciseControls(customExercises) {
 
 const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
 
+/** Per-lift "last time you actually trained it" strip for the splash screen. Skips a lift entirely if it has no completed history yet. */
+function liftStatusHtml(sessionLogs) {
+  const lastByLift = lastCompletedByLift(sessionLogs);
+  const rows = LIFT_ORDER.filter((lift) => lastByLift[lift])
+    .map((lift) => {
+      const info = lastByLift[lift];
+      return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${info.cycleNumber}:W${info.weekIndex} complete</span></div>`;
+    })
+    .join("");
+  return rows ? `<div class="card"><h3>Lift Status</h3>${rows}</div>` : "";
+}
+
 let todayScreen = "splash"; // 'splash' | 'workout'
 
 export function renderToday(root, ctx) {
@@ -280,6 +293,7 @@ function renderSplashScreen(root, ctx) {
       <div class="set-meta">${DAY_KIND_LABEL[day.kind]}</div>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
     </div>
+    ${liftStatusHtml(state.sessionLogs)}
     <div class="section-label">Or pick a different day</div>
     <div class="card splash-other-days">${otherDaysHtml}</div>
   `;

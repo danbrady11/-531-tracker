@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory } from "./state.js";
+import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -112,4 +112,29 @@ test("deriveCycleStateFromHistory: picks the most recent by date, not array orde
 test("deriveCycleStateFromHistory: completing day 6 of the last week of an odd cycle rolls into the next cycle (deload-even-only)", () => {
   const logs = [logAt(6, 3, 1, "2026-01-01T00:00:00Z", true)];
   assert.deepEqual(deriveCycleStateFromHistory(logs, deloadEvenOnly), { dayIndex: 1, weekIndex: 1, cycleNumber: 2 });
+});
+
+function logWithLift(lift, weekIndex, cycleNumber, date, completed) {
+  return { id: `${lift}-${date}`, date, dayIndex: 1, weekIndex, cycleNumber, lift, completed, mainSets: [], supplementalSets: [], accessorySets: [], notes: "" };
+}
+
+test("lastCompletedByLift: reports each lift's most recent completed cycle/week", () => {
+  const logs = [
+    logWithLift("bench", 1, 1, "2026-01-01T00:00:00Z", true),
+    logWithLift("bench", 2, 2, "2026-01-08T00:00:00Z", true), // most recent bench
+    logWithLift("squat", 1, 1, "2026-01-02T00:00:00Z", true),
+  ];
+  const result = lastCompletedByLift(logs);
+  assert.deepEqual(result.bench, { cycleNumber: 2, weekIndex: 2, date: "2026-01-08T00:00:00Z" });
+  assert.deepEqual(result.squat, { cycleNumber: 1, weekIndex: 1, date: "2026-01-02T00:00:00Z" });
+  assert.equal(result.press, undefined);
+});
+
+test("lastCompletedByLift: ignores skipped sessions and picks the most recent by date, not array order", () => {
+  const logs = [
+    logWithLift("press", 3, 1, "2026-01-10T00:00:00Z", true), // later date, earlier in array
+    logWithLift("press", 4, 2, "2026-01-15T00:00:00Z", false), // more recent but skipped — must not count
+    logWithLift("press", 1, 1, "2026-01-01T00:00:00Z", true),
+  ];
+  assert.deepEqual(lastCompletedByLift(logs), { press: { cycleNumber: 1, weekIndex: 3, date: "2026-01-10T00:00:00Z" } });
 });

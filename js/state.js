@@ -95,6 +95,24 @@ export function amrapHistory(sessionLogs, lift) {
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
+/**
+ * Most recent COMPLETED session per lift: { [lift]: {cycleNumber, weekIndex,
+ * date} }. Ignores skipped sessions entirely (consistent with how the cycle
+ * pointer itself only advances on real completion) — a lift with no
+ * completed history at all is simply absent from the result.
+ */
+export function lastCompletedByLift(sessionLogs) {
+  const result = {};
+  for (const log of sessionLogs) {
+    if (!log.completed || !log.lift) continue;
+    const existing = result[log.lift];
+    if (!existing || new Date(log.date) > new Date(existing.date)) {
+      result[log.lift] = { cycleNumber: log.cycleNumber ?? 1, weekIndex: log.weekIndex, date: log.date };
+    }
+  }
+  return result;
+}
+
 /** Weekly rolling average bodyweight: buckets entries into trailing 7-day windows ending on each entry's date. */
 export function bodyweightRollingAverage(entries) {
   const sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
