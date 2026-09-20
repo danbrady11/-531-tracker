@@ -14,10 +14,13 @@ export const LIFT_META = {
 };
 export const LIFT_ORDER = ["deadlift", "squat", "bench", "press", "trapBarDeadlift"];
 
-// Excludes trapBarDeadlift: its brief, discontinuous run isn't worth its own
-// line in the combined 1RM/volume chart, unlike LIFT_ORDER's other uses
-// (Lift Status on the splash screen) where surfacing it if it has history is
-// still useful.
+// Excludes trapBarDeadlift: its brief, discontinuous run isn't worth a
+// permanent line/legend entry in summary views — History's combined
+// 1RM/volume chart and the Calendar's legend — unlike LIFT_ORDER's other use
+// (Lift Status on the splash screen), where surfacing it if it has history is
+// still useful. Calendar dots for an actual logged trap bar day still render
+// in its own color regardless (colorVarForLog reads a log's own lift
+// directly, not this list) — only the legend entry is dropped.
 export const CHART_LIFT_ORDER = LIFT_ORDER.filter((lift) => lift !== "trapBarDeadlift");
 
 // The two non-lift day kinds (Recovery, Accessory) get their own colors too,

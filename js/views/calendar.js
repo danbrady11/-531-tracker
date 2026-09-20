@@ -1,6 +1,6 @@
 import { sessionsByDate } from "../state.js";
 import { dayInfo } from "../program.js";
-import { LIFT_META, NON_LIFT_DAY_META, NON_LIFT_COLOR_VAR } from "../lift-meta.js";
+import { LIFT_META, CHART_LIFT_ORDER, NON_LIFT_DAY_META, NON_LIFT_COLOR_VAR } from "../lift-meta.js";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -119,7 +119,7 @@ export function renderCalendar(root, ctx) {
       <div class="cal-weekdays">${WEEKDAY_LABELS.map((w) => `<div>${w}</div>`).join("")}</div>
       <div class="cal-grid">${renderGrid(cells, todayKey, mainCellInfo)}</div>
       <div class="cal-legend">
-        ${[...Object.values(LIFT_META), NON_LIFT_DAY_META.accessory]
+        ${[...CHART_LIFT_ORDER.map((lift) => LIFT_META[lift]), NON_LIFT_DAY_META.accessory]
           .map((meta) => `<span class="legend-item"><span class="legend-swatch" style="background:var(${meta.colorVar})"></span>${meta.label}</span>`)
           .join("")}
       </div>
