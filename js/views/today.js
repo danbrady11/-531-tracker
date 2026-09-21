@@ -132,32 +132,52 @@ function checkableAccessoryRow(accessory, session) {
  * button either, since its rest starts automatically the moment a set is
  * logged (see actions.toggleAccessorySet in app.js).
  */
-function accessoryRestControl(accessory, restTimerSec) {
+function accessoryRestControl(accessory, activeName, restTimerSec) {
   if (accessory.supersetRole === "a") {
     return `<div class="set-meta">Superset — go straight into the next exercise, no rest.</div>`;
   }
   if (accessory.supersetRole === "b") {
     return `<div class="set-meta">Superset — ${formatSec(restTimerSec.superset)} rest starts automatically once a set is logged.</div>`;
   }
-  return restButtonHtml(restTimerSec[restCategoryFor(accessory)], `${accessory.name} rest`);
+  return restButtonHtml(restTimerSec[restCategoryFor(accessory)], `${activeName} rest`);
+}
+
+/** Which of an accessory's variants (e.g. standing/seated calf raise) the current session is actually logging — the day's default until switched. */
+function activeVariantName(accessory, session) {
+  if (!accessory.variants) return accessory.name;
+  const logged = (session.accessorySets || []).find((s) => accessory.variants.includes(s.exerciseName));
+  return logged?.exerciseName || accessory.variants[0];
+}
+
+function variantToggleHtml(accessory, activeName) {
+  if (!accessory.variants) return "";
+  const buttons = accessory.variants
+    .map(
+      (v) =>
+        `<button class="pill-tab ${v === activeName ? "active" : ""}" data-action="set-variant" data-old="${escapeHtml(activeName)}" data-new="${escapeHtml(v)}">${escapeHtml(v)}</button>`
+    )
+    .join("");
+  return `<div class="pill-tabs" style="margin-bottom:8px;">${buttons}</div>`;
 }
 
 function accessoryBlock(accessory, session, sessionLogs, restTimerSec) {
   if (accessory.sets == null) return checkableAccessoryRow(accessory, session);
 
-  const entries = (session.accessorySets || []).filter((s) => s.exerciseName === accessory.name);
+  const activeName = activeVariantName(accessory, session);
+  const entries = (session.accessorySets || []).filter((s) => s.exerciseName === activeName);
   const chips = entries
-    .map((entry, i) => accessorySetChip(accessory.name, entry.setIndex ?? i, entry, lastAccessoryLog(sessionLogs, accessory.name, entry.setIndex ?? i)))
+    .map((entry, i) => accessorySetChip(activeName, entry.setIndex ?? i, entry, lastAccessoryLog(sessionLogs, activeName, entry.setIndex ?? i)))
     .join("");
   return `
     <div class="accessory-block">
       <div class="accessory-name">
-        <span>${escapeHtml(accessory.name)}</span>
+        <span>${escapeHtml(activeName)}</span>
         <span class="accessory-target">${accessory.sets}×${accessory.repsLabel}</span>
       </div>
+      ${variantToggleHtml(accessory, activeName)}
       ${accessory.cue ? `<div class="accessory-cue">${escapeHtml(accessory.cue)}</div>` : ""}
       <div class="accessory-sets">${chips}</div>
-      <div class="btn-row" style="margin-top:8px;">${accessoryRestControl(accessory, restTimerSec)}</div>
+      <div class="btn-row" style="margin-top:8px;">${accessoryRestControl(accessory, activeName, restTimerSec)}</div>
     </div>`;
 }
 
@@ -384,7 +404,15 @@ function renderWorkoutScreen(root, ctx) {
   }
 
   const psoasStrengthNames = day.hasPsoasStrength ? new Set(PSOAS_STRENGTH.map((a) => a.name)) : new Set();
-  const fixedNames = new Set([...day.accessories.map((a) => a.name), ...psoasStrengthNames]);
+  // Includes every variant name (e.g. both standing and seated calf raise),
+  // not just each accessory's generic slot name — session logs are always
+  // keyed by whichever concrete variant was actually performed, so matching
+  // only the slot name would wrongly treat both variants as ad hoc "extra"
+  // exercises added mid-session.
+  const fixedNames = new Set([
+    ...day.accessories.flatMap((a) => (a.variants ? a.variants : [a.name])),
+    ...psoasStrengthNames,
+  ]);
   const extraNames = [...new Set((session.accessorySets || []).map((s) => s.exerciseName))].filter((n) => !fixedNames.has(n));
 
   html += `<div class="card">
@@ -481,6 +509,9 @@ function wireActions(root, ctx) {
 
   root.querySelectorAll('[data-action="toggle-accessory"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleAccessorySet(el.dataset.exercise, Number(el.dataset.index)))
+  );
+  root.querySelectorAll('[data-action="set-variant"]').forEach((el) =>
+    el.addEventListener("click", () => actions.setAccessoryVariant(el.dataset.old, el.dataset.new))
   );
   root.querySelectorAll('[data-action="toggle-daily-psoas"]').forEach((el) =>
     el.addEventListener("click", () => actions.toggleDailyPsoas(el.dataset.name))

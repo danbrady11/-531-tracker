@@ -631,6 +631,18 @@ const actions = {
     entry[field] = value;
     persist();
   },
+  // Switches which variant (e.g. standing vs seated calf raise) an
+  // accessory slot is logging under for this session — relabels the
+  // existing entries in place, keeping whatever weight/reps/completed
+  // state was already there rather than resetting it.
+  setAccessoryVariant(oldName, newName) {
+    if (oldName === newName) return;
+    state.currentSession.accessorySets = state.currentSession.accessorySets.map((s) =>
+      s.exerciseName === oldName ? { ...s, exerciseName: newName } : s
+    );
+    persist();
+    renderCurrentView();
+  },
   // Ad hoc exercise added to just this session, beyond the day's fixed
   // accessory list. Remembers the name in state.customExercises so it shows
   // up in the "add exercise" dropdown on any future day too.
@@ -801,6 +813,15 @@ const actions = {
     state.bodyweightEntries.push(...entries);
     persist();
     showToast(`Added ${entries.length} weigh-in${entries.length === 1 ? "" : "s"}`);
+    renderCurrentView();
+  },
+  // Matches by date rather than a stored id — bodyweight entries have no id
+  // of their own, and an exact-timestamp collision between two real entries
+  // is vanishingly unlikely (removing both in that case is an acceptable,
+  // simple tradeoff rather than adding an id to every entry for it).
+  deleteBodyweightEntry(date) {
+    state.bodyweightEntries = state.bodyweightEntries.filter((e) => e.date !== date);
+    persist();
     renderCurrentView();
   },
   exportJSON() {

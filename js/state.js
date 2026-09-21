@@ -235,10 +235,14 @@ export function newSessionLog({ dayIndex, weekIndex, cycleNumber }, mainSets, su
     supplementalSets,
     // Activities with no set count (yoga, Zone 2) still get exactly one
     // entry, so there's a single checkbox to mark them done — just without
-    // the weight/reps fields a normal accessory's sets would carry.
+    // the weight/reps fields a normal accessory's sets would carry. An
+    // accessory offering variants (e.g. standing/seated calf raise) logs
+    // under its default (first) variant's real name, never the generic
+    // slot name — history/prefill is always keyed by the concrete exercise
+    // actually performed, and the day's original choice stays the default.
     accessorySets: accessories.flatMap((a) =>
       Array.from({ length: a.sets || 1 }, (_, setIndex) => ({
-        exerciseName: a.name,
+        exerciseName: a.variants ? a.variants[0] : a.name,
         setIndex,
         weight: null,
         reps: null,

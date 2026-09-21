@@ -117,7 +117,15 @@ function renderBodyweight(root, state, ctx) {
   list.innerHTML = recent
     .map(
       (e) =>
-        `<div class="bw-row"><span>${new Date(e.date).toLocaleDateString()}</span><span>${e.weight} lb <span class="set-meta">(7d avg ${e.rollingAverage})</span></span></div>`
+        `<div class="bw-row">
+          <span>${new Date(e.date).toLocaleDateString()}</span>
+          <span>${e.weight} lb <span class="set-meta">(7d avg ${e.rollingAverage})</span></span>
+          <button class="btn btn-sm btn-ghost" data-action="delete-bw" data-date="${e.date}" aria-label="Delete entry">✕</button>
+        </div>`
     )
     .join("");
+
+  list.querySelectorAll('[data-action="delete-bw"]').forEach((el) =>
+    el.addEventListener("click", () => ctx.actions.deleteBodyweightEntry(el.dataset.date))
+  );
 }

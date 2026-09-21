@@ -71,7 +71,7 @@ export const DAYS = {
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
       { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound" },
-      { name: "Standing calf raise", sets: 5, repsLabel: "15" },
+      { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Standing calf raise", "Seated calf raise"] },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
@@ -117,7 +117,7 @@ export const DAYS = {
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
-      { name: "Seated calf raise", sets: 5, repsLabel: "15" },
+      { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
@@ -132,10 +132,14 @@ export function dayInfo(dayIndex) {
 
 /**
  * Full accessory definition (name, sets, repsLabel, cue, restCategory,
- * supersetRole, ...) for a named exercise on a given day, searching both the
- * day's own fixed accessories and Psoas Strength (present whenever
- * hasPsoasStrength is true). Returns null for ad hoc exercises added mid-
- * session, which have no such definition.
+ * supersetRole, variants, ...) for a named exercise on a given day,
+ * searching both the day's own fixed accessories and Psoas Strength
+ * (present whenever hasPsoasStrength is true). Matches either an
+ * accessory's own name or, for one offering variants (e.g. standing/seated
+ * calf raise), any of its variant names — session logs are always keyed by
+ * the concrete variant actually performed, never the generic slot name.
+ * Returns null for ad hoc exercises added mid-session, which have no such
+ * definition.
  *
  * A pair is expressed with no shared id — each exercise just carries its own
  * `supersetRole: "a" | "b"` — because nothing here ever needs to look up an
@@ -145,7 +149,7 @@ export function dayInfo(dayIndex) {
 export function accessoryDefFor(dayIndex, exerciseName) {
   const day = dayInfo(dayIndex);
   const pool = [...day.accessories, ...(day.hasPsoasStrength ? PSOAS_STRENGTH : [])];
-  return pool.find((a) => a.name === exerciseName) || null;
+  return pool.find((a) => a.name === exerciseName || a.variants?.includes(exerciseName)) || null;
 }
 
 /** Which rest-timer bucket (see settings.restTimerSec) a set-based accessory uses. */

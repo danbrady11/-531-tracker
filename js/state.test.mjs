@@ -83,6 +83,16 @@ test("newSessionLog: a normal accessory still gets one entry per set", () => {
   assert.equal(session.accessorySets.filter((s) => s.exerciseName === "Curls").length, 3);
 });
 
+test("newSessionLog: an accessory with variants logs under its default (first) variant, never the generic slot name", () => {
+  const session = newSessionLog(
+    { dayIndex: 3, weekIndex: 1, cycleNumber: 1 },
+    [], [],
+    [{ name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Standing calf raise", "Seated calf raise"] }]
+  );
+  assert.equal(session.accessorySets.filter((s) => s.exerciseName === "Standing calf raise").length, 5);
+  assert.equal(session.accessorySets.some((s) => s.exerciseName === "Calf raise"), false);
+});
+
 function logAt(dayIndex, weekIndex, cycleNumber, date, completed) {
   return { id: `${date}-${dayIndex}`, date, dayIndex, weekIndex, cycleNumber, lift: null, completed, mainSets: [], supplementalSets: [], accessorySets: [], notes: "" };
 }
