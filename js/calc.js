@@ -47,11 +47,16 @@ export function fslSets(trainingMax, weekIndex, roundingIncrement) {
   return Array.from({ length: 3 }, () => ({ type: "fsl", percentage: pct, weight, targetReps: 8, reps: null }));
 }
 
-/** BBB supplemental: 5x10 at settings.bbbPercentage of TM. Deload = none. */
-export function bbbSets(trainingMax, weekIndex, bbbPercentage, roundingIncrement) {
+// Bench and squat BBB never drops below the empty-bar-plus-plates weight
+// that still makes 5x10 worth doing — low TMs on those two lifts otherwise
+// compute a BBB weight too light to be useful.
+export const BBB_MIN_WEIGHT = { bench: 135, squat: 135 };
+
+/** BBB supplemental: 5x10 at settings.bbbPercentage of TM (or the lift's BBB minimum, if higher). Deload = none. */
+export function bbbSets(trainingMax, weekIndex, bbbPercentage, roundingIncrement, lift) {
   const scheme = WEEK_SCHEMES[weekIndex];
   if (scheme.deload) return [];
-  const weight = computeWeight(trainingMax, bbbPercentage, roundingIncrement);
+  const weight = Math.max(computeWeight(trainingMax, bbbPercentage, roundingIncrement), BBB_MIN_WEIGHT[lift] ?? 0);
   return Array.from({ length: 5 }, () => ({ type: "bbb", percentage: bbbPercentage, weight, targetReps: 10, reps: null }));
 }
 

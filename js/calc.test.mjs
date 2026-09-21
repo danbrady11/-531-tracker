@@ -101,6 +101,26 @@ test("bbbSets: 5x10 at configured % of TM, none on deload", () => {
   assert.equal(deload.length, 0);
 });
 
+test("bbbSets: bench and squat never drop below the 135 lb BBB minimum, even at low TMs", () => {
+  const lightBench = bbbSets(150, 1, 0.5, 5, "bench"); // 50% of 150 = 75, below the 135 floor
+  assert.ok(lightBench.every((s) => s.weight === 135));
+
+  const lightSquat = bbbSets(150, 1, 0.5, 5, "squat");
+  assert.ok(lightSquat.every((s) => s.weight === 135));
+
+  // Above the floor, the computed weight still wins.
+  const heavyBench = bbbSets(400, 1, 0.5, 5, "bench");
+  assert.ok(heavyBench.every((s) => s.weight === 200));
+});
+
+test("bbbSets: deadlift and press have no BBB minimum", () => {
+  const lightDeadlift = bbbSets(150, 1, 0.5, 5, "deadlift");
+  assert.ok(lightDeadlift.every((s) => s.weight === 75));
+
+  const lightPress = bbbSets(150, 1, 0.5, 5, "press");
+  assert.ok(lightPress.every((s) => s.weight === 75));
+});
+
 test("warmupSets: 40/50/60% x 5/5/3", () => {
   const sets = warmupSets(300, 5);
   assert.equal(sets[0].weight, 120);

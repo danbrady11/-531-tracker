@@ -184,7 +184,7 @@ function buildSessionForPosition(position) {
     if (day.supplemental === "fsl") {
       supplementalSets = fslSets(tm, weekIndex, roundingIncrement).map((s) => ({ ...s, completed: false }));
     } else if (day.supplemental === "bbb") {
-      supplementalSets = bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement).map((s) => ({ ...s, completed: false }));
+      supplementalSets = bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement, day.lift).map((s) => ({ ...s, completed: false }));
     }
   }
 
