@@ -656,11 +656,18 @@ input, select, textarea {
   outline: 1px solid var(--border);
 }
 
+.cal-dots {
+  display: flex;
+  gap: 3px;
+  min-height: 9px;
+}
+
 .cal-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: var(--accent);
+  flex-shrink: 0;
 }
 
 .cal-legend {

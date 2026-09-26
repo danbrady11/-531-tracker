@@ -53,24 +53,20 @@ function buildCells(year, month) {
   return cells;
 }
 
-// cellInfoForKey(key) -> { count, colorVar }, where colorVar is only
-// meaningful when count === 1 (count > 1 always renders a muted dot,
-// since a single dot can't represent more than one distinct color).
+// cellInfoForKey(key) -> { colorVars }, one entry per session that day —
+// one dot per session, each in its own lift's color.
 function renderGrid(cells, todayKey, cellInfoForKey) {
   return cells
     .map((c) => {
       if (c.muted) return `<div class="cal-cell muted"><span>${c.day}</span></div>`;
-      const { count, colorVar } = cellInfoForKey(c.key);
+      const { colorVars } = cellInfoForKey(c.key);
       const isToday = c.key === todayKey;
-      let dotHtml = "";
-      if (count === 1) {
-        dotHtml = `<span class="cal-dot" style="background:var(${colorVar})"></span>`;
-      } else if (count > 1) {
-        dotHtml = `<span class="cal-dot" style="background:var(--text-muted)"></span>`;
-      }
-      return `<button class="cal-cell ${count ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
+      const dotsHtml = colorVars
+        .map((colorVar) => `<span class="cal-dot" style="background:var(${colorVar})"></span>`)
+        .join("");
+      return `<button class="cal-cell ${colorVars.length ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
         <span>${c.day}</span>
-        ${dotHtml}
+        <span class="cal-dots">${dotsHtml}</span>
       </button>`;
     })
     .join("");
@@ -85,7 +81,7 @@ export function renderCalendar(root, ctx) {
   const cells = buildCells(viewYear, viewMonth);
   const mainCellInfo = (key) => {
     const logs = (byDate.get(key) || []).filter(isMainOrAccessoryLog);
-    return { count: logs.length, colorVar: logs.length === 1 ? colorVarForLog(logs[0]) : null };
+    return { colorVars: logs.map(colorVarForLog) };
   };
 
   root.innerHTML = `
