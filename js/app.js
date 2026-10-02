@@ -193,6 +193,10 @@ function buildSessionForPosition(position) {
     const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
     return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
   });
+  // Separate from the lift itself: a single shoulder rehab checkbox on the
+  // days that have it, persisted with the session regardless of whether the
+  // day ends up completed or skipped.
+  if (day.hasShoulderRehab) session.shoulderRehabCompleted = false;
   return session;
 }
 
@@ -212,7 +216,7 @@ function ensureCurrentSession() {
 function updateCycleBadge() {
   const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
   const weekCount = effectiveWeekCount(cycleNumber, state.settings);
-  cycleBadge.textContent = `Day ${dayIndex}/6 · Week ${weekIndex}/${weekCount} · Cycle ${cycleNumber}`;
+  cycleBadge.textContent = `Day ${dayIndex}/${DAY_COUNT} · Week ${weekIndex}/${weekCount} · Cycle ${cycleNumber}`;
 }
 
 function applyTheme() {
@@ -382,6 +386,9 @@ function renderSessionDetail(log) {
         .join("")}</div>`;
     }
   }
+  if (log.shoulderRehabCompleted !== undefined) {
+    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>${detailLine("Shoulder Rehab", null, null, log.shoulderRehabCompleted)}</div>`;
+  }
   if (log.notes) {
     html += `<div class="session-detail-group"><h4>Notes</h4><p>${escapeHtml(log.notes)}</p></div>`;
   }
@@ -445,6 +452,14 @@ function renderSessionEditForm(draft) {
         .join("")}</div>`;
     }
   }
+  if (draft.shoulderRehabCompleted !== undefined) {
+    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>
+      <div class="rehab-row">
+        <button class="set-check ${draft.shoulderRehabCompleted ? "done" : ""}" data-hedit-action="toggle-shoulder" aria-label="Mark done">${draft.shoulderRehabCompleted ? "✓" : ""}</button>
+        <div class="set-info"><div class="rehab-name">Shoulder Rehab</div></div>
+      </div>
+    </div>`;
+  }
   html += `<div class="session-detail-group"><h4>Notes</h4><textarea id="hedit-notes" style="width:100%;min-height:72px;" placeholder="Notes">${escapeHtml(draft.notes || "")}</textarea></div>`;
   html += `<div class="btn-row"><button class="btn btn-primary btn-block" id="hedit-save">Save changes</button></div>
     <div class="btn-row"><button class="btn btn-block" id="hedit-cancel">Cancel</button></div>`;
@@ -480,6 +495,12 @@ function wireSessionEditForm(root, draft) {
       else item.reps = val;
     })
   );
+  root.querySelector('[data-hedit-action="toggle-shoulder"]')?.addEventListener("click", (e) => {
+    draft.shoulderRehabCompleted = !draft.shoulderRehabCompleted;
+    e.currentTarget.classList.toggle("done", draft.shoulderRehabCompleted);
+    e.currentTarget.textContent = draft.shoulderRehabCompleted ? "✓" : "";
+  });
+
   root.querySelector("#hedit-save").addEventListener("click", () => {
     draft.completed = root.querySelector("#hedit-completed").checked;
     draft.notes = root.querySelector("#hedit-notes").value;
@@ -623,6 +644,11 @@ const actions = {
   },
   removeAdHocExercise(exerciseName) {
     state.currentSession.accessorySets = state.currentSession.accessorySets.filter((s) => s.exerciseName !== exerciseName);
+    persist();
+    renderCurrentView();
+  },
+  toggleShoulderRehab() {
+    state.currentSession.shoulderRehabCompleted = !state.currentSession.shoulderRehabCompleted;
     persist();
     renderCurrentView();
   },

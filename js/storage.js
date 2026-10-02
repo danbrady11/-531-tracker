@@ -72,6 +72,30 @@ function rotateDayIndex(dayIndex) {
   return DAY_INDEX_ROTATE_V1[dayIndex] ?? dayIndex;
 }
 
+// One-time program restructure: Recovery (old day 2) dropped entirely, and
+// Daily Psoas / Psoas Strength removed from every day. Bench/Squat/Press/
+// Accessory/Deadlift keep their exercises unchanged, just renumbered into a
+// 5-day cycle with Recovery's slot gone. For session HISTORY, Recovery's old
+// day 2 remaps to day 6 — a reserved slot (see program.js's LEGACY_DAYS)
+// that preserves those old Yoga/Zone 2 logs under a name of their own
+// instead of colliding with whatever day 2 (now Squat) means going forward.
+const DAY_COUNT_5_REMAP_HISTORY = { 1: 1, 2: 6, 3: 2, 4: 3, 5: 4, 6: 5 };
+
+function remapDayIndexForHistory(dayIndex) {
+  return DAY_COUNT_5_REMAP_HISTORY[dayIndex] ?? dayIndex;
+}
+
+// For the live cycle pointer (state.cycleState) and an in-progress
+// currentSession, old day 2 (Recovery) has nowhere sensible to stay — it no
+// longer exists — so it resolves forward to whatever would run next (old
+// day 3, Squat, now day 2) rather than to the history-only legacy slot.
+// Every other day shifts down by one past the removed slot.
+function remapDayIndexForLivePointer(dayIndex) {
+  if (dayIndex <= 1) return dayIndex;
+  if (dayIndex === 2) return 2;
+  return dayIndex - 1;
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -113,6 +137,23 @@ export function migrate(state) {
       merged.currentSession = { ...merged.currentSession, dayIndex: rotateDayIndex(merged.currentSession.dayIndex) };
     }
     merged._dayOrderRotatedV1 = true;
+  }
+
+  if (!state._dayCount5MigrationV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForHistory(log.dayIndex) }));
+    merged.cycleState = { ...merged.cycleState, dayIndex: remapDayIndexForLivePointer(merged.cycleState.dayIndex) };
+    // An in-progress Recovery session has nowhere to continue — Recovery no
+    // longer exists — so it's dropped rather than relabeled under Squat's
+    // new day 2 with mismatched content; a fresh Squat session gets built
+    // automatically next time Today renders (see ensureCurrentSession).
+    if (merged.currentSession) {
+      if (merged.currentSession.dayIndex === 2) {
+        merged.currentSession = null;
+      } else {
+        merged.currentSession = { ...merged.currentSession, dayIndex: remapDayIndexForLivePointer(merged.currentSession.dayIndex) };
+      }
+    }
+    merged._dayCount5MigrationV1 = true;
   }
 
   return merged;

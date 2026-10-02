@@ -1,15 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { accessoryDefFor, restCategoryFor } from "./program.js";
+import { accessoryDefFor, restCategoryFor, dayInfo } from "./program.js";
 
 test("accessoryDefFor finds a fixed accessory on the given day", () => {
-  const def = accessoryDefFor(3, "RDL"); // Squat day
+  const def = accessoryDefFor(2, "RDL"); // Squat day
   assert.equal(def?.name, "RDL");
   assert.equal(def?.restCategory, "compound");
 });
 
 test("accessoryDefFor returns null for an ad hoc exercise not defined anywhere on that day", () => {
-  assert.equal(accessoryDefFor(3, "Face pulls (optional)"), null);
+  assert.equal(accessoryDefFor(2, "Face pulls (optional)"), null);
 });
 
 test("restCategoryFor returns the tagged category when set", () => {
@@ -22,7 +22,7 @@ test("restCategoryFor defaults to isolation when untagged or missing", () => {
 });
 
 test("Lateral raise / Reverse pec deck are always a superset pair, on every day both appear", () => {
-  for (const dayIndex of [1, 3, 5]) {
+  for (const dayIndex of [1, 2, 4]) {
     const lateral = accessoryDefFor(dayIndex, "Lateral raise");
     const reverseFly = accessoryDefFor(dayIndex, "Reverse pec deck / cable reverse fly");
     assert.equal(lateral?.supersetRole, "a", `day ${dayIndex} Lateral raise`);
@@ -31,7 +31,7 @@ test("Lateral raise / Reverse pec deck are always a superset pair, on every day 
 });
 
 test("accessoryDefFor matches either calf raise variant name, on both days that offer it", () => {
-  for (const dayIndex of [3, 6]) {
+  for (const dayIndex of [2, 5]) {
     const standing = accessoryDefFor(dayIndex, "Standing calf raise");
     const seated = accessoryDefFor(dayIndex, "Seated calf raise");
     assert.equal(standing?.name, "Calf raise", `day ${dayIndex} standing`);
@@ -42,6 +42,20 @@ test("accessoryDefFor matches either calf raise variant name, on both days that 
 });
 
 test("calf raise defaults to Standing on Squat day and Seated on Deadlift day", () => {
-  assert.equal(accessoryDefFor(3, "Standing calf raise").variants[0], "Standing calf raise");
-  assert.equal(accessoryDefFor(6, "Seated calf raise").variants[0], "Seated calf raise");
+  assert.equal(accessoryDefFor(2, "Standing calf raise").variants[0], "Standing calf raise");
+  assert.equal(accessoryDefFor(5, "Seated calf raise").variants[0], "Seated calf raise");
+});
+
+test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, for old history only", () => {
+  const legacy = dayInfo(6);
+  assert.equal(legacy?.name, "Recovery");
+  assert.equal(legacy?.kind, "recovery");
+});
+
+test("Shoulder Rehab is flagged on Bench and Press, not on Squat/Accessory/Deadlift", () => {
+  assert.equal(dayInfo(1).hasShoulderRehab, true);
+  assert.equal(dayInfo(3).hasShoulderRehab, true);
+  assert.ok(!dayInfo(2).hasShoulderRehab);
+  assert.ok(!dayInfo(4).hasShoulderRehab);
+  assert.ok(!dayInfo(5).hasShoulderRehab);
 });

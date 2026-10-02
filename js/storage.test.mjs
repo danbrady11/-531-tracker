@@ -130,8 +130,14 @@ test("migrate renames an in-progress currentSession's accessorySets too", () => 
   assert.equal(migrated.currentSession.accessorySets[0].exerciseName, "Reverse pec deck / cable reverse fly");
 });
 
+// These three tests exercise the day-order rotation in isolation, so they
+// pre-flag the later day-count-5 migration as already done — otherwise a
+// plain migrate() call here would run both one-time migrations back to
+// back, and the asserted dayIndex values would need to reflect the second
+// shift too.
 test("migrate rotates old dayIndex values to match the reordered program (Deadlift day1 -> day6, etc.)", () => {
   const state = {
+    _dayCount5MigrationV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // was Deadlift
       { ...sessionWith([]), dayIndex: 6 }, // was Accessory
@@ -145,7 +151,7 @@ test("migrate rotates old dayIndex values to match the reordered program (Deadli
 });
 
 test("migrate's day-order rotation runs exactly once (flagged), not repeatedly on reload", () => {
-  const once = migrate({ sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }] });
+  const once = migrate({ _dayCount5MigrationV1: true, sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }] });
   assert.equal(once.sessionLogs[0].dayIndex, 6);
   assert.equal(once._dayOrderRotatedV1, true);
 
@@ -155,7 +161,60 @@ test("migrate's day-order rotation runs exactly once (flagged), not repeatedly o
 });
 
 test("migrate rotates an in-progress currentSession's dayIndex too", () => {
-  const state = { sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 5 } }; // was Press
+  const state = { _dayCount5MigrationV1: true, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 5 } }; // was Press
   const migrated = migrate(state);
   assert.equal(migrated.currentSession.dayIndex, 4);
+});
+
+// The day-count-5 migration runs after day-order-rotation (real users already
+// have _dayOrderRotatedV1: true), so these pre-flag that one as done and
+// test only the restructure: Recovery dropped, everything else renumbered.
+test("migrate remaps completed history onto the 5-day cycle, sending old Recovery (day 2) to the reserved legacy day 6", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    sessionLogs: [
+      { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
+      { ...sessionWith([]), dayIndex: 2 }, // was Recovery
+      { ...sessionWith([]), dayIndex: 3 }, // was Squat
+      { ...sessionWith([]), dayIndex: 4 }, // was Press
+      { ...sessionWith([]), dayIndex: 5 }, // was Accessory
+      { ...sessionWith([]), dayIndex: 6 }, // was Deadlift
+    ],
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [1, 6, 2, 3, 4, 5]);
+  assert.equal(migrated._dayCount5MigrationV1, true);
+});
+
+test("migrate advances cycleState past the removed Recovery day to Squat's new slot, same week/cycle", () => {
+  const state = { _dayOrderRotatedV1: true, sessionLogs: [], cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3 } };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.cycleState, { dayIndex: 2, weekIndex: 2, cycleNumber: 3 });
+});
+
+test("migrate shifts a non-Recovery cycleState dayIndex down past the removed slot", () => {
+  const state = { _dayOrderRotatedV1: true, sessionLogs: [], cycleState: { dayIndex: 6, weekIndex: 1, cycleNumber: 1 } }; // was Deadlift
+  const migrated = migrate(state);
+  assert.equal(migrated.cycleState.dayIndex, 5);
+});
+
+test("migrate discards an in-progress Recovery currentSession (nothing to continue) instead of mislabeling it as Squat", () => {
+  const state = { _dayOrderRotatedV1: true, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 2 } };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession, null);
+});
+
+test("migrate shifts a non-Recovery in-progress currentSession's dayIndex down past the removed slot", () => {
+  const state = { _dayOrderRotatedV1: true, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 4 } }; // was Press
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.dayIndex, 3);
+});
+
+test("migrate's day-count-5 restructure runs exactly once, not repeatedly on reload", () => {
+  const once = migrate({ _dayOrderRotatedV1: true, sessionLogs: [{ ...sessionWith([]), dayIndex: 3 }] });
+  assert.equal(once.sessionLogs[0].dayIndex, 2);
+  assert.equal(once._dayCount5MigrationV1, true);
+
+  const twice = migrate(once);
+  assert.equal(twice.sessionLogs[0].dayIndex, 2, "must not shift a second time");
 });

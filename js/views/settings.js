@@ -1,5 +1,6 @@
 import { LIFTS } from "../calc.js";
 import { effectiveWeekCount } from "../state.js";
+import { DAY_COUNT } from "../program.js";
 
 const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press", trapBarDeadlift: "Trap Bar Deadlift" };
 
@@ -43,8 +44,8 @@ export function renderSettings(root, ctx) {
       <h3>Cycle position</h3>
       <div class="field-row">
         <div class="field">
-          <label>Day (1–6)</label>
-          <input class="set-input" style="width:100%" type="number" min="1" max="6" value="${state.cycleState.dayIndex}" data-action="edit-day" />
+          <label>Day (1–${DAY_COUNT})</label>
+          <input class="set-input" style="width:100%" type="number" min="1" max="${DAY_COUNT}" value="${state.cycleState.dayIndex}" data-action="edit-day" />
         </div>
         <div class="field">
           <label>Week (1–4)</label>

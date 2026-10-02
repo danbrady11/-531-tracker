@@ -1,4 +1,7 @@
-// Static description of the 6-day rolling cycle. Day numbers are 1-6.
+// Static description of the 5-day rolling cycle. Day numbers are 1-5.
+
+// Single checkbox, no weight/rep logging — a band sequence, not tracked set by set.
+export const SHOULDER_REHAB_ITEM = { name: "Shoulder Rehab", cue: "Band sequence (own routine)" };
 
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
@@ -6,17 +9,13 @@
 // "main" bucket instead, handled directly in today.js/app.js.
 export const DEFAULT_REST_CATEGORY = "isolation";
 
-// Reordered so Deadlift is last (day 6) rather than first — completing it is
-// what concludes a cycle. Each day's own content/flags are unchanged from
-// before; only which slot number holds which day moved. Existing history's
-// dayIndex values are re-mapped once in storage.js's migrate() so past
-// sessions keep showing the correct exercise name after this reorder.
 export const DAYS = {
   1: {
     name: "Bench",
     kind: "main",
     lift: "bench",
     supplemental: "bbb",
+    hasShoulderRehab: true,
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
@@ -28,16 +27,6 @@ export const DAYS = {
     ],
   },
   2: {
-    name: "Recovery",
-    kind: "recovery",
-    lift: null,
-    supplemental: null,
-    accessories: [
-      { name: "Yoga", sets: null, repsLabel: "" },
-      { name: "Zone 2", sets: null, repsLabel: "30 min" },
-    ],
-  },
-  3: {
     name: "Squat",
     kind: "main",
     lift: "squat",
@@ -51,11 +40,12 @@ export const DAYS = {
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
-  4: {
+  3: {
     name: "Press",
     kind: "main",
     lift: "press",
     supplemental: "bbb",
+    hasShoulderRehab: true,
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
       { name: "Incline DB press", sets: 3, repsLabel: "10–12", restCategory: "compound" },
@@ -63,7 +53,7 @@ export const DAYS = {
       { name: "Hammer curls", sets: 3, repsLabel: "12" },
     ],
   },
-  5: {
+  4: {
     name: "Accessory",
     kind: "accessory",
     lift: null,
@@ -74,10 +64,9 @@ export const DAYS = {
       { name: "Straight-arm pulldown", sets: 3, repsLabel: "12", restCategory: "compound" },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
-      { name: "Zone 2", sets: null, repsLabel: "30 min" },
     ],
   },
-  6: {
+  5: {
     name: "Deadlift",
     kind: "main",
     lift: "deadlift",
@@ -91,11 +80,30 @@ export const DAYS = {
   },
 };
 
-export const DAY_COUNT = 6;
+// Day numbers removed from the active program (Recovery, dropped entirely)
+// but kept here so old session logs that still reference them — remapped to
+// this reserved slot by storage.js's migrate() rather than left colliding
+// with a new day's number — render a correct name/content instead of
+// crashing. Never included in DAY_COUNT or any day-cycling logic, so nothing
+// new is ever built for one.
+const LEGACY_DAYS = {
+  6: {
+    name: "Recovery",
+    kind: "recovery",
+    lift: null,
+    supplemental: null,
+    accessories: [
+      { name: "Yoga", sets: null, repsLabel: "" },
+      { name: "Zone 2", sets: null, repsLabel: "30 min" },
+    ],
+  },
+};
+
+export const DAY_COUNT = 5;
 export const WEEK_COUNT = 4;
 
 export function dayInfo(dayIndex) {
-  return DAYS[dayIndex];
+  return DAYS[dayIndex] || LEGACY_DAYS[dayIndex];
 }
 
 /**
