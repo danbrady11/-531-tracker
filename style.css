@@ -633,7 +633,10 @@ input, select, textarea {
   border-radius: 10px;
 }
 
-.cal-cell.muted {
+/* Adjacent-month days are still clickable (they can carry real sessions),
+   so only the day number itself is dimmed — the dots stay at full strength
+   so a session on a visible neighboring-month day is easy to read. */
+.cal-cell.muted > span:first-child {
   color: var(--text-muted);
   opacity: 0.4;
 }

@@ -34,21 +34,32 @@ function isMainOrAccessoryLog(log) {
   return kind === "main" || kind === "accessory";
 }
 
+// Leading/trailing cells from the adjacent months (shown to fill out the
+// grid) get real date keys too, not just the current month's days — so a
+// visible Oct 1-3 shown at the end of September's grid is clickable and
+// shows its own sessions, same as any other day.
 function buildCells(year, month) {
   const firstOfMonth = new Date(year, month, 1);
   const startWeekday = firstOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const nextYear = month === 11 ? year + 1 : year;
 
   const cells = [];
   for (let i = 0; i < startWeekday; i++) {
-    cells.push({ day: daysInPrevMonth - startWeekday + 1 + i, muted: true });
+    const day = daysInPrevMonth - startWeekday + 1 + i;
+    cells.push({ day, muted: true, key: dateKey(prevYear, prevMonth, day) });
   }
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push({ day: d, muted: false, key: dateKey(year, month, d) });
   }
+  let nextDay = 1;
   while (cells.length % 7 !== 0) {
-    cells.push({ day: cells.length - startWeekday - daysInMonth + 1, muted: true });
+    cells.push({ day: nextDay, muted: true, key: dateKey(nextYear, nextMonth, nextDay) });
+    nextDay++;
   }
   return cells;
 }
@@ -58,13 +69,12 @@ function buildCells(year, month) {
 function renderGrid(cells, todayKey, cellInfoForKey) {
   return cells
     .map((c) => {
-      if (c.muted) return `<div class="cal-cell muted"><span>${c.day}</span></div>`;
       const { colorVars } = cellInfoForKey(c.key);
       const isToday = c.key === todayKey;
       const dotsHtml = colorVars
         .map((colorVar) => `<span class="cal-dot" style="background:var(${colorVar})"></span>`)
         .join("");
-      return `<button class="cal-cell ${colorVars.length ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
+      return `<button class="cal-cell ${c.muted ? "muted" : ""} ${colorVars.length ? "has-session" : ""} ${isToday ? "is-today" : ""}" data-action="cal-day" data-key="${c.key}">
         <span>${c.day}</span>
         <span class="cal-dots">${dotsHtml}</span>
       </button>`;
