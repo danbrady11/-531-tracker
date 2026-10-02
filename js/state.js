@@ -172,7 +172,8 @@ export function volumeHistory(sessionLogs, lift) {
  * Combined series for all four main lifts, aligned to a shared x-axis of program
  * weeks (cycle+week), for the overlay chart in History. metric is 'e1rm' or 'volume'.
  * Each series' values array is the same length as xLabels; null where that lift
- * had no session that week (the chart just skips the gap rather than interpolating).
+ * had no session that week — the chart draws straight through those gaps to
+ * the next real point rather than breaking the line.
  */
 export function combinedLiftMetricSeries(sessionLogs, metric) {
   const weekKey = (log) => `${log.cycleNumber ?? 1}-${log.weekIndex}`;

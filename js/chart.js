@@ -108,7 +108,10 @@ export function drawLineChart(canvas, points, { yLabel = "", suffix = "" } = {})
 /**
  * Multi-series overlay line chart, all series sharing one y-axis.
  * xLabels: string[]. series: [{ lift, colorVar, label, values: (number|null)[] }]
- * values length must match xLabels length; null = no data at that x slot (line skips the gap).
+ * values length must match xLabels length; null = no data at that x slot — the
+ * line draws straight through to the next real point rather than breaking,
+ * since a gap usually just means that lift wasn't trained that week, not a
+ * true interruption.
  */
 export function drawMultiLineChart(canvas, { xLabels, series, suffix = "" } = {}) {
   const dpr = window.devicePixelRatio || 1;
@@ -179,10 +182,7 @@ export function drawMultiLineChart(canvas, { xLabels, series, suffix = "" } = {}
     let drawing = false;
     ctx.beginPath();
     s.values.forEach((v, i) => {
-      if (v == null) {
-        drawing = false;
-        return;
-      }
+      if (v == null) return;
       const x = xFor(i);
       const y = yFor(v);
       if (!drawing) {
