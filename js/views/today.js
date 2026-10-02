@@ -1,4 +1,4 @@
-import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
+import { dayInfo, DAY_COUNT, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
 import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle, amrapHistory } from "../state.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
@@ -181,57 +181,6 @@ function accessoryBlock(accessory, session, sessionLogs, restTimerSec) {
     </div>`;
 }
 
-/** Daily Psoas: checkbox-only, no weight/reps, rendered on every day from one shared definition. */
-function dailyPsoasBlock(session) {
-  const rows = (session.dailyPsoas || [])
-    .map((item) => {
-      const def = DAILY_PSOAS.find((d) => d.name === item.name);
-      return `
-        <div class="rehab-row">
-          <button class="set-check ${item.completed ? "done" : ""}" data-action="toggle-daily-psoas" data-name="${escapeHtml(item.name)}" aria-label="Mark done">
-            ${item.completed ? "✓" : ""}
-          </button>
-          <div class="set-info">
-            <div class="rehab-name">${escapeHtml(item.name)}</div>
-            ${def?.cue ? `<div class="accessory-cue">${escapeHtml(def.cue)}</div>` : ""}
-          </div>
-        </div>`;
-    })
-    .join("");
-  return `
-    <div class="card rehab-card">
-      <h3>Daily — Psoas</h3>
-      ${rows}
-    </div>`;
-}
-
-/** Single checkbox, no weight/reps — a band sequence the user already knows. */
-function shoulderRehabBlock(session) {
-  const done = !!session.shoulderRehabCompleted;
-  return `
-    <div class="card rehab-card">
-      <h3>Shoulder Rehab</h3>
-      <div class="rehab-row">
-        <button class="set-check ${done ? "done" : ""}" data-action="toggle-shoulder-rehab" aria-label="Mark done">
-          ${done ? "✓" : ""}
-        </button>
-        <div class="set-info">
-          <div class="rehab-name">${escapeHtml(SHOULDER_REHAB_ITEM.name)}</div>
-          <div class="accessory-cue">${escapeHtml(SHOULDER_REHAB_ITEM.cue)}</div>
-        </div>
-      </div>
-    </div>`;
-}
-
-/** Psoas Strength: logged like a normal accessory (weight/band level + reps, prefilled). */
-function psoasStrengthBlock(session, sessionLogs, restTimerSec) {
-  return `
-    <div class="card">
-      <h3>Psoas Strength</h3>
-      ${PSOAS_STRENGTH.map((a) => accessoryBlock(a, session, sessionLogs, restTimerSec)).join("")}
-    </div>`;
-}
-
 /** An exercise added ad hoc to just this session — not part of the day's fixed list, so it always gets the isolation-rest default. */
 function extraAccessoryBlock(exerciseName, session, sessionLogs, restTimerSec) {
   const entries = (session.accessorySets || []).filter((s) => s.exerciseName === exerciseName);
@@ -366,11 +315,6 @@ function renderWorkoutScreen(root, ctx) {
   html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of 6</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
-  // Shoulder Rehab goes before the main lift; Daily Psoas is prep work done
-  // on every day, so both come before the lift itself.
-  if (day.hasShoulderRehab) html += shoulderRehabBlock(session);
-  html += dailyPsoasBlock(session);
-
   if (isMainDay) {
     const tm = state.trainingMaxes[day.lift].currentValue;
     // Best e1RM from prior completed sessions only — today's own AMRAP
@@ -403,16 +347,12 @@ function renderWorkoutScreen(root, ctx) {
       <div class="set-meta">No main lift today.</div></div>`;
   }
 
-  const psoasStrengthNames = day.hasPsoasStrength ? new Set(PSOAS_STRENGTH.map((a) => a.name)) : new Set();
   // Includes every variant name (e.g. both standing and seated calf raise),
   // not just each accessory's generic slot name — session logs are always
   // keyed by whichever concrete variant was actually performed, so matching
   // only the slot name would wrongly treat both variants as ad hoc "extra"
   // exercises added mid-session.
-  const fixedNames = new Set([
-    ...day.accessories.flatMap((a) => (a.variants ? a.variants : [a.name])),
-    ...psoasStrengthNames,
-  ]);
+  const fixedNames = new Set(day.accessories.flatMap((a) => (a.variants ? a.variants : [a.name])));
   const extraNames = [...new Set((session.accessorySets || []).map((s) => s.exerciseName))].filter((n) => !fixedNames.has(n));
 
   html += `<div class="card">
@@ -422,8 +362,6 @@ function renderWorkoutScreen(root, ctx) {
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
     ${addExerciseControls(state.customExercises || [])}
   </div>`;
-
-  if (day.hasPsoasStrength) html += psoasStrengthBlock(session, state.sessionLogs, restTimerSec);
 
   html += `<div class="card notes-field">
     <h3>Notes</h3>
@@ -513,10 +451,6 @@ function wireActions(root, ctx) {
   root.querySelectorAll('[data-action="set-variant"]').forEach((el) =>
     el.addEventListener("click", () => actions.setAccessoryVariant(el.dataset.old, el.dataset.new))
   );
-  root.querySelectorAll('[data-action="toggle-daily-psoas"]').forEach((el) =>
-    el.addEventListener("click", () => actions.toggleDailyPsoas(el.dataset.name))
-  );
-  root.querySelector('[data-action="toggle-shoulder-rehab"]')?.addEventListener("click", () => actions.toggleShoulderRehab());
   root.querySelectorAll('[data-action="accessory-value"]').forEach((el) =>
     el.addEventListener("change", () =>
       actions.setAccessoryValue(el.dataset.exercise, Number(el.dataset.index), el.dataset.field, el.value === "" ? null : Number(el.value))

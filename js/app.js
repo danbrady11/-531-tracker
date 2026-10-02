@@ -1,7 +1,7 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
-import { dayInfo, DAY_COUNT, DAILY_PSOAS, PSOAS_STRENGTH, accessoryDefFor } from "./program.js";
+import { dayInfo, DAY_COUNT, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
@@ -188,19 +188,11 @@ function buildSessionForPosition(position) {
     }
   }
 
-  const accessoriesForSession = [...day.accessories, ...(day.hasPsoasStrength ? PSOAS_STRENGTH : [])];
-  const session = newSessionLog(position, mainSets, supplementalSets, accessoriesForSession);
+  const session = newSessionLog(position, mainSets, supplementalSets, day.accessories);
   session.accessorySets = session.accessorySets.map((entry) => {
     const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
     return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
   });
-  // Rehab tracking, separate from the lift itself: a daily checklist (every
-  // day, no weight/reps) and, on days that have it, a single shoulder rehab
-  // checkbox. Both persist with the session regardless of whether the day
-  // ends up completed or skipped, so adherence can be seen independent of
-  // whether the lift happened.
-  session.dailyPsoas = DAILY_PSOAS.map((item) => ({ name: item.name, completed: false }));
-  if (day.hasShoulderRehab) session.shoulderRehabCompleted = false;
   return session;
 }
 
@@ -390,14 +382,6 @@ function renderSessionDetail(log) {
         .join("")}</div>`;
     }
   }
-  if (log.dailyPsoas?.length) {
-    html += `<div class="session-detail-group"><h4>Daily Psoas</h4>${log.dailyPsoas
-      .map((item) => detailLine(item.name, null, null, item.completed))
-      .join("")}</div>`;
-  }
-  if (log.shoulderRehabCompleted !== undefined) {
-    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>${detailLine("Shoulder Rehab", null, null, log.shoulderRehabCompleted)}</div>`;
-  }
   if (log.notes) {
     html += `<div class="session-detail-group"><h4>Notes</h4><p>${escapeHtml(log.notes)}</p></div>`;
   }
@@ -461,25 +445,6 @@ function renderSessionEditForm(draft) {
         .join("")}</div>`;
     }
   }
-  if (draft.dailyPsoas?.length) {
-    html += `<div class="session-detail-group"><h4>Daily Psoas</h4>${draft.dailyPsoas
-      .map(
-        (item, i) => `
-        <div class="rehab-row">
-          <button class="set-check ${item.completed ? "done" : ""}" data-hedit-action="toggle-psoas" data-index="${i}" aria-label="Mark done">${item.completed ? "✓" : ""}</button>
-          <div class="set-info"><div class="rehab-name">${escapeHtml(item.name)}</div></div>
-        </div>`
-      )
-      .join("")}</div>`;
-  }
-  if (draft.shoulderRehabCompleted !== undefined) {
-    html += `<div class="session-detail-group"><h4>Shoulder Rehab</h4>
-      <div class="rehab-row">
-        <button class="set-check ${draft.shoulderRehabCompleted ? "done" : ""}" data-hedit-action="toggle-shoulder" aria-label="Mark done">${draft.shoulderRehabCompleted ? "✓" : ""}</button>
-        <div class="set-info"><div class="rehab-name">Shoulder Rehab</div></div>
-      </div>
-    </div>`;
-  }
   html += `<div class="session-detail-group"><h4>Notes</h4><textarea id="hedit-notes" style="width:100%;min-height:72px;" placeholder="Notes">${escapeHtml(draft.notes || "")}</textarea></div>`;
   html += `<div class="btn-row"><button class="btn btn-primary btn-block" id="hedit-save">Save changes</button></div>
     <div class="btn-row"><button class="btn btn-block" id="hedit-cancel">Cancel</button></div>`;
@@ -515,20 +480,6 @@ function wireSessionEditForm(root, draft) {
       else item.reps = val;
     })
   );
-  root.querySelectorAll('[data-hedit-action="toggle-psoas"]').forEach((el) =>
-    el.addEventListener("click", () => {
-      const item = draft.dailyPsoas[Number(el.dataset.index)];
-      item.completed = !item.completed;
-      el.classList.toggle("done", item.completed);
-      el.textContent = item.completed ? "✓" : "";
-    })
-  );
-  root.querySelector('[data-hedit-action="toggle-shoulder"]')?.addEventListener("click", (e) => {
-    draft.shoulderRehabCompleted = !draft.shoulderRehabCompleted;
-    e.currentTarget.classList.toggle("done", draft.shoulderRehabCompleted);
-    e.currentTarget.textContent = draft.shoulderRehabCompleted ? "✓" : "";
-  });
-
   root.querySelector("#hedit-save").addEventListener("click", () => {
     draft.completed = root.querySelector("#hedit-completed").checked;
     draft.notes = root.querySelector("#hedit-notes").value;
@@ -672,17 +623,6 @@ const actions = {
   },
   removeAdHocExercise(exerciseName) {
     state.currentSession.accessorySets = state.currentSession.accessorySets.filter((s) => s.exerciseName !== exerciseName);
-    persist();
-    renderCurrentView();
-  },
-  toggleDailyPsoas(name) {
-    const item = state.currentSession.dailyPsoas.find((i) => i.name === name);
-    item.completed = !item.completed;
-    persist();
-    renderCurrentView();
-  },
-  toggleShoulderRehab() {
-    state.currentSession.shoulderRehabCompleted = !state.currentSession.shoulderRehabCompleted;
     persist();
     renderCurrentView();
   },

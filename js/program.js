@@ -1,25 +1,5 @@
 // Static description of the 6-day rolling cycle. Day numbers are 1-6.
 
-// Checkbox-only, no weight/rep logging. Defined once and rendered on every
-// day (including Recovery) rather than duplicated into each day's list.
-export const DAILY_PSOAS = [
-  { name: "90/90 breathing", cue: "5 breaths" },
-  { name: "Dead bug", cue: "3×8/side — slow; low back flat" },
-  { name: "Glute bridge", cue: "3×12 — 2s pause at top" },
-  { name: "Half-kneeling hip flexor position", cue: "2×30s/side — pelvis tucked, glute squeezed, breathe (not a hard stretch)" },
-];
-
-// Logged like a normal accessory (weight/band level + reps, prefilled from
-// history). Only appears on the days whose hasPsoasStrength flag is true.
-export const PSOAS_STRENGTH = [
-  { name: "Standing banded knee raise", sets: 3, repsLabel: "10/side", cue: "drive knee above 90°, 3s lower" },
-  { name: "Supine psoas march", sets: 3, repsLabel: "10/side", cue: "back flat" },
-  { name: "Standing hip flexor isometric", sets: 3, repsLabel: "20s/side" },
-];
-
-// Single checkbox, no weight/rep logging — a band sequence, not tracked set by set.
-export const SHOULDER_REHAB_ITEM = { name: "Shoulder Rehab", cue: "Band sequence (own routine)" };
-
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
 // Main lift working sets and BBB/FSL supplemental sets use their own fixed
@@ -37,8 +17,6 @@ export const DAYS = {
     kind: "main",
     lift: "bench",
     supplemental: "bbb",
-    hasPsoasStrength: true,
-    hasShoulderRehab: true,
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
@@ -54,8 +32,6 @@ export const DAYS = {
     kind: "recovery",
     lift: null,
     supplemental: null,
-    hasPsoasStrength: true,
-    hasShoulderRehab: false,
     accessories: [
       { name: "Yoga", sets: null, repsLabel: "" },
       { name: "Zone 2", sets: null, repsLabel: "30 min" },
@@ -66,8 +42,6 @@ export const DAYS = {
     kind: "main",
     lift: "squat",
     supplemental: "bbb",
-    hasPsoasStrength: false,
-    hasShoulderRehab: false,
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
       { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound" },
@@ -82,8 +56,6 @@ export const DAYS = {
     kind: "main",
     lift: "press",
     supplemental: "bbb",
-    hasPsoasStrength: false,
-    hasShoulderRehab: true,
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
       { name: "Incline DB press", sets: 3, repsLabel: "10–12", restCategory: "compound" },
@@ -96,8 +68,6 @@ export const DAYS = {
     kind: "accessory",
     lift: null,
     supplemental: null,
-    hasPsoasStrength: true,
-    hasShoulderRehab: false,
     accessories: [
       { name: "Seated cable row (close grip)", sets: 5, repsLabel: "10" },
       { name: "Lat pulldown", sets: 4, repsLabel: "10", restCategory: "compound" },
@@ -112,8 +82,6 @@ export const DAYS = {
     kind: "main",
     lift: "deadlift",
     supplemental: "bbb",
-    hasPsoasStrength: false,
-    hasShoulderRehab: false,
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
@@ -132,14 +100,12 @@ export function dayInfo(dayIndex) {
 
 /**
  * Full accessory definition (name, sets, repsLabel, cue, restCategory,
- * supersetRole, variants, ...) for a named exercise on a given day,
- * searching both the day's own fixed accessories and Psoas Strength
- * (present whenever hasPsoasStrength is true). Matches either an
- * accessory's own name or, for one offering variants (e.g. standing/seated
- * calf raise), any of its variant names — session logs are always keyed by
- * the concrete variant actually performed, never the generic slot name.
- * Returns null for ad hoc exercises added mid-session, which have no such
- * definition.
+ * supersetRole, variants, ...) for a named exercise on a given day's fixed
+ * accessory list. Matches either an accessory's own name or, for one
+ * offering variants (e.g. standing/seated calf raise), any of its variant
+ * names — session logs are always keyed by the concrete variant actually
+ * performed, never the generic slot name. Returns null for ad hoc exercises
+ * added mid-session, which have no such definition.
  *
  * A pair is expressed with no shared id — each exercise just carries its own
  * `supersetRole: "a" | "b"` — because nothing here ever needs to look up an
@@ -148,8 +114,7 @@ export function dayInfo(dayIndex) {
  */
 export function accessoryDefFor(dayIndex, exerciseName) {
   const day = dayInfo(dayIndex);
-  const pool = [...day.accessories, ...(day.hasPsoasStrength ? PSOAS_STRENGTH : [])];
-  return pool.find((a) => a.name === exerciseName || a.variants?.includes(exerciseName)) || null;
+  return day.accessories.find((a) => a.name === exerciseName || a.variants?.includes(exerciseName)) || null;
 }
 
 /** Which rest-timer bucket (see settings.restTimerSec) a set-based accessory uses. */
