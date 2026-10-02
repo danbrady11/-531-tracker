@@ -1,8 +1,5 @@
 // Static description of the 5-day rolling cycle. Day numbers are 1-5.
 
-// Single checkbox, no weight/rep logging — a band sequence, not tracked set by set.
-export const SHOULDER_REHAB_ITEM = { name: "Shoulder Rehab", cue: "Band sequence (own routine)" };
-
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
 // Main lift working sets and BBB/FSL supplemental sets use their own fixed
@@ -15,7 +12,6 @@ export const DAYS = {
     kind: "main",
     lift: "bench",
     supplemental: "bbb",
-    hasShoulderRehab: true,
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
@@ -45,7 +41,6 @@ export const DAYS = {
     kind: "main",
     lift: "press",
     supplemental: "bbb",
-    hasShoulderRehab: true,
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
       { name: "Incline DB press", sets: 3, repsLabel: "10–12", restCategory: "compound" },

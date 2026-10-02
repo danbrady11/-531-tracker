@@ -1,4 +1,4 @@
-import { dayInfo, DAY_COUNT, SHOULDER_REHAB_ITEM, restCategoryFor } from "../program.js";
+import { dayInfo, DAY_COUNT, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
 import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle, amrapHistory } from "../state.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
@@ -181,24 +181,6 @@ function accessoryBlock(accessory, session, sessionLogs, restTimerSec) {
     </div>`;
 }
 
-/** Single checkbox, no weight/reps — a band sequence the user already knows. */
-function shoulderRehabBlock(session) {
-  const done = !!session.shoulderRehabCompleted;
-  return `
-    <div class="card rehab-card">
-      <h3>Shoulder Rehab</h3>
-      <div class="rehab-row">
-        <button class="set-check ${done ? "done" : ""}" data-action="toggle-shoulder-rehab" aria-label="Mark done">
-          ${done ? "✓" : ""}
-        </button>
-        <div class="set-info">
-          <div class="rehab-name">${escapeHtml(SHOULDER_REHAB_ITEM.name)}</div>
-          <div class="accessory-cue">${escapeHtml(SHOULDER_REHAB_ITEM.cue)}</div>
-        </div>
-      </div>
-    </div>`;
-}
-
 /** An exercise added ad hoc to just this session — not part of the day's fixed list, so it always gets the isolation-rest default. */
 function extraAccessoryBlock(exerciseName, session, sessionLogs, restTimerSec) {
   const entries = (session.accessorySets || []).filter((s) => s.exerciseName === exerciseName);
@@ -332,9 +314,6 @@ function renderWorkoutScreen(root, ctx) {
   let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;
   html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of ${DAY_COUNT}</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
-
-  // Shoulder Rehab goes before the main lift, on the days that have it.
-  if (day.hasShoulderRehab) html += shoulderRehabBlock(session);
 
   if (isMainDay) {
     const tm = state.trainingMaxes[day.lift].currentValue;
@@ -472,7 +451,6 @@ function wireActions(root, ctx) {
   root.querySelectorAll('[data-action="set-variant"]').forEach((el) =>
     el.addEventListener("click", () => actions.setAccessoryVariant(el.dataset.old, el.dataset.new))
   );
-  root.querySelector('[data-action="toggle-shoulder-rehab"]')?.addEventListener("click", () => actions.toggleShoulderRehab());
   root.querySelectorAll('[data-action="accessory-value"]').forEach((el) =>
     el.addEventListener("change", () =>
       actions.setAccessoryValue(el.dataset.exercise, Number(el.dataset.index), el.dataset.field, el.value === "" ? null : Number(el.value))

@@ -51,11 +51,3 @@ test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, 
   assert.equal(legacy?.name, "Recovery");
   assert.equal(legacy?.kind, "recovery");
 });
-
-test("Shoulder Rehab is flagged on Bench and Press, not on Squat/Accessory/Deadlift", () => {
-  assert.equal(dayInfo(1).hasShoulderRehab, true);
-  assert.equal(dayInfo(3).hasShoulderRehab, true);
-  assert.ok(!dayInfo(2).hasShoulderRehab);
-  assert.ok(!dayInfo(4).hasShoulderRehab);
-  assert.ok(!dayInfo(5).hasShoulderRehab);
-});

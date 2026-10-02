@@ -328,19 +328,8 @@ input, select, textarea {
   margin: -2px 0 8px;
 }
 
-/* Shoulder Rehab — visually distinct from ordinary lifting cards via a
-   teal accent border and tinted heading. */
-.rehab-card {
-  border-color: var(--rehab);
-  border-width: 2px;
-}
-
-.rehab-card h3 {
-  color: var(--rehab);
-}
-
-/* Shared row style for checkbox-only items (Shoulder Rehab, and formerly
-   Yoga/Zone 2 — no weight/reps to log, just a single done/not-done toggle). */
+/* Shared row style for checkbox-only accessories (no weight/reps to log,
+   just a single done/not-done toggle). */
 .rehab-row {
   display: flex;
   align-items: flex-start;
