@@ -6,17 +6,23 @@ import { nextTrainingMax, epleyE1RM, LIFTS } from "./calc.js";
  * deloadOnEvenCyclesOnly on (the default), only even cycle numbers (2, 4, 6,
  * ...) get a 4th deload week — odd cycles end after week 3. Turning that
  * setting off reverts to every cycle being 4 weeks with a deload.
+ *
+ * deloadOverride (true/false/null) lets the current cycle's deload status be
+ * toggled by hand from the main screen, taking priority over the
+ * cycleNumber-parity rule above for that one cycle; null defers to the rule.
  */
-export function effectiveWeekCount(cycleNumber, settings) {
+export function effectiveWeekCount(cycleNumber, settings, deloadOverride = null) {
+  if (deloadOverride === true) return WEEK_COUNT;
+  if (deloadOverride === false) return WEEK_COUNT - 1;
   if (!settings?.deloadOnEvenCyclesOnly) return WEEK_COUNT;
   return cycleNumber % 2 === 0 ? WEEK_COUNT : WEEK_COUNT - 1;
 }
 
 /** Advance the cycle by one day. Wrapping day 6->1 advances the week; wrapping the cycle's last week completes it. */
-export function advanceCycle(cycleState, settings) {
+export function advanceCycle(cycleState, settings, deloadOverride = null) {
   let { dayIndex, weekIndex, cycleNumber } = cycleState;
   let cycleCompleted = false;
-  const weekCount = effectiveWeekCount(cycleNumber, settings);
+  const weekCount = effectiveWeekCount(cycleNumber, settings, deloadOverride);
 
   dayIndex += 1;
   if (dayIndex > DAY_COUNT) {

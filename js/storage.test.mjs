@@ -11,6 +11,16 @@ test("migrate defaults deloadOnEvenCyclesOnly to true for a brand-new state", ()
   assert.equal(migrated.settings.deloadOnEvenCyclesOnly, true);
 });
 
+test("migrate backfills cycleState.deloadOverride to null for a state saved before it existed", () => {
+  const migrated = migrate({ cycleState: { dayIndex: 3, weekIndex: 2, cycleNumber: 1 } });
+  assert.equal(migrated.cycleState.deloadOverride, null);
+});
+
+test("migrate preserves an explicitly set cycleState.deloadOverride", () => {
+  const migrated = migrate({ cycleState: { dayIndex: 3, weekIndex: 2, cycleNumber: 1, deloadOverride: true } });
+  assert.equal(migrated.cycleState.deloadOverride, true);
+});
+
 test("migrate drops the superseded deloadEveryOtherCycle key", () => {
   const migrated = migrate({ settings: { deloadEveryOtherCycle: true } });
   assert.equal("deloadEveryOtherCycle" in migrated.settings, false);
@@ -189,7 +199,7 @@ test("migrate remaps completed history onto the 5-day cycle, sending old Recover
 test("migrate advances cycleState past the removed Recovery day to Squat's new slot, same week/cycle", () => {
   const state = { _dayOrderRotatedV1: true, sessionLogs: [], cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3 } };
   const migrated = migrate(state);
-  assert.deepEqual(migrated.cycleState, { dayIndex: 2, weekIndex: 2, cycleNumber: 3 });
+  assert.deepEqual(migrated.cycleState, { dayIndex: 2, weekIndex: 2, cycleNumber: 3, deloadOverride: null });
 });
 
 test("migrate shifts a non-Recovery cycleState dayIndex down past the removed slot", () => {

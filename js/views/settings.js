@@ -53,7 +53,7 @@ export function renderSettings(root, ctx) {
         </div>
       </div>
       <div class="set-meta">Cycle number: ${state.cycleState.cycleNumber} · ${
-        effectiveWeekCount(state.cycleState.cycleNumber, s) === 4
+        effectiveWeekCount(state.cycleState.cycleNumber, s, state.cycleState.deloadOverride) === 4
           ? "this cycle ends with a deload (week 4)"
           : "this cycle skips deload — ends after week 3"
       }</div>

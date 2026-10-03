@@ -210,8 +210,8 @@ function ensureCurrentSession() {
 }
 
 function updateCycleBadge() {
-  const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
-  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
+  const { dayIndex, weekIndex, cycleNumber, deloadOverride } = state.cycleState;
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings, deloadOverride);
   cycleBadge.textContent = `Day ${dayIndex}/${DAY_COUNT} · Week ${weekIndex}/${weekCount} · Cycle ${cycleNumber}`;
 }
 
@@ -503,8 +503,18 @@ function finishDay(completed) {
     // from state.cycleState if it was started via the day picker rather
     // than the recommended next day — so completing an out-of-order day
     // still picks up the rotation from there.
-    const result = advanceCycle({ dayIndex: session.dayIndex, weekIndex: session.weekIndex, cycleNumber: session.cycleNumber }, state.settings);
-    state.cycleState = result.cycleState;
+    const result = advanceCycle(
+      { dayIndex: session.dayIndex, weekIndex: session.weekIndex, cycleNumber: session.cycleNumber },
+      state.settings,
+      state.cycleState.deloadOverride
+    );
+    // The override is specific to the cycle it was set on — carry it
+    // forward within the same cycle, but reset it once a new cycle starts
+    // so the next one defaults fresh to the settings-based rule.
+    state.cycleState = {
+      ...result.cycleState,
+      deloadOverride: result.cycleCompleted ? null : state.cycleState.deloadOverride,
+    };
     cycleCompleted = result.cycleCompleted;
   }
   // A skip logs the attempt but never moves the recommended-next pointer —
@@ -626,6 +636,16 @@ const actions = {
     persist();
     renderCurrentView();
   },
+  // Flips whichever deload status is currently in effect for this cycle
+  // (override if set, else the settings-based parity rule) and pins that as
+  // an explicit override — lasts only for this cycle; see finishDay.
+  toggleDeloadOverride() {
+    const { cycleNumber, deloadOverride } = state.cycleState;
+    const isDeloadNow = effectiveWeekCount(cycleNumber, state.settings, deloadOverride) === 4;
+    state.cycleState = { ...state.cycleState, deloadOverride: !isDeloadNow };
+    persist();
+    renderCurrentView();
+  },
   updateNotes(text) {
     state.currentSession.notes = text;
     persist();
@@ -719,7 +739,10 @@ const actions = {
        <div class="btn-row"><button class="btn btn-block" id="resync-cancel">Cancel</button></div>`,
       (root) => {
         root.querySelector("#resync-confirm").addEventListener("click", () => {
-          state.cycleState = derived;
+          // Resyncing to ground truth also clears any manual deload
+          // override — it's cycle-specific and this may now be a different
+          // cycle than the one it was set for.
+          state.cycleState = { ...derived, deloadOverride: null };
           state.currentSession = null;
           persist();
           closeModal();

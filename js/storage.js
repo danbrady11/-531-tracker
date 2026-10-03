@@ -30,7 +30,11 @@ function defaultState() {
       // app.js prompts for a real starting number the first time this loads.
       trapBarDeadlift: { currentValue: 0, updatedAt: null },
     },
-    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
+    // deloadOverride lets the current cycle's deload status be toggled by
+    // hand from the main screen; null means "use the settings-based rule".
+    // Reset to null whenever a new cycle starts (see advanceCycle's caller
+    // in app.js's finishDay) so each cycle defaults fresh unless re-toggled.
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1, deloadOverride: null },
     sessionLogs: [],
     bodyweightEntries: [],
     // Exercise names the user has added ad hoc to a workout at least once,

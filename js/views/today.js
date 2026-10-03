@@ -256,9 +256,10 @@ export function renderToday(root, ctx) {
 
 function renderSplashScreen(root, ctx) {
   const { state } = ctx;
-  const { dayIndex, weekIndex, cycleNumber } = state.cycleState;
+  const { dayIndex, weekIndex, cycleNumber, deloadOverride } = state.cycleState;
   const day = dayInfo(dayIndex);
-  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings, deloadOverride);
+  const isDeloadCycle = weekCount === 4;
 
   const otherDaysHtml = Array.from({ length: DAY_COUNT }, (_, i) => i + 1)
     .filter((i) => i !== dayIndex)
@@ -277,6 +278,10 @@ function renderSplashScreen(root, ctx) {
       <div class="splash-kicker">Up next · Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount}</div>
       <h2 class="splash-title">${escapeHtml(day.name)}</h2>
       <div class="set-meta">${DAY_KIND_LABEL[day.kind]}</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.85rem;">
+        <input type="checkbox" style="width:18px;height:18px;" data-action="toggle-deload" ${isDeloadCycle ? "checked" : ""} />
+        Deload this cycle (4 weeks, week 4 deload)
+      </label>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
     </div>
     ${liftStatusHtml(state.sessionLogs, state.settings)}
@@ -296,6 +301,7 @@ function renderSplashScreen(root, ctx) {
       renderToday(root, ctx);
     })
   );
+  root.querySelector('[data-action="toggle-deload"]')?.addEventListener("change", () => ctx.actions.toggleDeloadOverride());
 }
 
 function renderWorkoutScreen(root, ctx) {
@@ -308,7 +314,7 @@ function renderWorkoutScreen(root, ctx) {
   const day = dayInfo(dayIndex);
   const isMainDay = day.kind === "main";
   const bar = state.settings.barWeight;
-  const weekCount = effectiveWeekCount(cycleNumber, state.settings);
+  const weekCount = effectiveWeekCount(cycleNumber, state.settings, state.cycleState.deloadOverride);
   const restTimerSec = state.settings.restTimerSec;
 
   let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;

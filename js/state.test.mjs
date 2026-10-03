@@ -52,6 +52,31 @@ test("advanceCycle: ordinary day-to-day advancement within a week is unaffected"
   assert.equal(cycleCompleted, false);
 });
 
+test("effectiveWeekCount: a deloadOverride of true forces 4 weeks even on an odd (rule-says-3) cycle", () => {
+  assert.equal(effectiveWeekCount(1, deloadEvenOnly, true), 4);
+});
+
+test("effectiveWeekCount: a deloadOverride of false forces 3 weeks even on an even (rule-says-4) cycle", () => {
+  assert.equal(effectiveWeekCount(2, deloadEvenOnly, false), 3);
+});
+
+test("effectiveWeekCount: deloadOverride of null (or omitted) defers to the settings-based rule", () => {
+  assert.equal(effectiveWeekCount(1, deloadEvenOnly, null), 3);
+  assert.equal(effectiveWeekCount(2, deloadEvenOnly), 4);
+});
+
+test("advanceCycle: a true override lets an odd cycle reach week 4 instead of completing after week 3", () => {
+  const { cycleState, cycleCompleted } = advanceCycle({ dayIndex: 5, weekIndex: 3, cycleNumber: 1 }, deloadEvenOnly, true);
+  assert.deepEqual(cycleState, { dayIndex: 1, weekIndex: 4, cycleNumber: 1 });
+  assert.equal(cycleCompleted, false);
+});
+
+test("advanceCycle: a false override completes an even cycle after week 3 instead of running week 4", () => {
+  const { cycleState, cycleCompleted } = advanceCycle({ dayIndex: 5, weekIndex: 3, cycleNumber: 2 }, deloadEvenOnly, false);
+  assert.deepEqual(cycleState, { dayIndex: 1, weekIndex: 1, cycleNumber: 3 });
+  assert.equal(cycleCompleted, true);
+});
+
 function sessionWith(overrides) {
   return {
     id: "1", date: "2026-01-01T00:00:00.000Z", dayIndex: 2, weekIndex: 1, cycleNumber: 1,
