@@ -29,7 +29,7 @@ export const DAYS = {
     supplemental: "bbb",
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
-      { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound" },
+      { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound", variants: ["Swiss ball leg curl", "Machine leg curl"] },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Standing calf raise", "Seated calf raise"] },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },

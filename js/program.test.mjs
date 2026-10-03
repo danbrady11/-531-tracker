@@ -46,6 +46,15 @@ test("calf raise defaults to Standing on Squat day and Seated on Deadlift day", 
   assert.equal(accessoryDefFor(5, "Seated calf raise").variants[0], "Seated calf raise");
 });
 
+test("Swiss ball leg curl offers Machine leg curl as an alternate variant, defaulting to Swiss ball", () => {
+  const swissBall = accessoryDefFor(2, "Swiss ball leg curl");
+  const machine = accessoryDefFor(2, "Machine leg curl");
+  assert.equal(swissBall, machine, "both names resolve to the same slot");
+  assert.deepEqual(swissBall.variants, ["Swiss ball leg curl", "Machine leg curl"]);
+  assert.equal(swissBall.variants[0], "Swiss ball leg curl");
+  assert.equal(restCategoryFor(swissBall), "compound");
+});
+
 test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, for old history only", () => {
   const legacy = dayInfo(6);
   assert.equal(legacy?.name, "Recovery");
