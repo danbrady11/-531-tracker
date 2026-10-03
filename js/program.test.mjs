@@ -51,3 +51,24 @@ test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, 
   assert.equal(legacy?.name, "Recovery");
   assert.equal(legacy?.kind, "recovery");
 });
+
+test("Accessory day (4) opens with Incline barbell press and Flat DB press, both compound rest, ahead of the rest of the day", () => {
+  const names = dayInfo(4).accessories.map((a) => a.name);
+  assert.deepEqual(names, [
+    "Incline barbell press",
+    "Flat DB press",
+    "Seated cable row (close grip)",
+    "Lat pulldown",
+    "Straight-arm pulldown",
+    "Lateral raise",
+    "Reverse pec deck / cable reverse fly",
+  ]);
+  const incline = accessoryDefFor(4, "Incline barbell press");
+  const flatDb = accessoryDefFor(4, "Flat DB press");
+  assert.equal(incline.repsLabel, "8–10");
+  assert.equal(incline.sets, 3);
+  assert.equal(restCategoryFor(incline), "compound");
+  assert.equal(flatDb.repsLabel, "8–10");
+  assert.equal(flatDb.sets, 3);
+  assert.equal(restCategoryFor(flatDb), "compound");
+});
