@@ -54,7 +54,6 @@ export const DAYS = {
     supplemental: null,
     accessories: [
       { name: "Incline barbell press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
-      { name: "Flat DB press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
       { name: "Hex press", sets: 3, repsLabel: "12–15" },
       { name: "Seated cable row (close grip)", sets: 5, repsLabel: "10" },
       { name: "Lat pulldown", sets: 4, repsLabel: "10", restCategory: "compound" },

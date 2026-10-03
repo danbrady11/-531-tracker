@@ -61,11 +61,10 @@ test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, 
   assert.equal(legacy?.kind, "recovery");
 });
 
-test("Accessory day (4) opens with Incline barbell press, Flat DB press, Hex press, ahead of the rest of the day", () => {
+test("Accessory day (4) opens with Incline barbell press, Hex press, ahead of the rest of the day", () => {
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Incline barbell press",
-    "Flat DB press",
     "Hex press",
     "Seated cable row (close grip)",
     "Lat pulldown",
@@ -74,16 +73,13 @@ test("Accessory day (4) opens with Incline barbell press, Flat DB press, Hex pre
     "Reverse pec deck / cable reverse fly",
   ]);
   const incline = accessoryDefFor(4, "Incline barbell press");
-  const flatDb = accessoryDefFor(4, "Flat DB press");
   assert.equal(incline.repsLabel, "8–10");
   assert.equal(incline.sets, 3);
   assert.equal(restCategoryFor(incline), "compound");
-  assert.equal(flatDb.repsLabel, "8–10");
-  assert.equal(flatDb.sets, 3);
-  assert.equal(restCategoryFor(flatDb), "compound");
+  assert.equal(accessoryDefFor(4, "Flat DB press"), null);
 });
 
-test("Hex press sits between Flat DB press and Seated cable row, 3x12-15 at isolation (default) rest", () => {
+test("Hex press sits between Incline barbell press and Seated cable row, 3x12-15 at isolation (default) rest", () => {
   const hexPress = accessoryDefFor(4, "Hex press");
   assert.equal(hexPress.sets, 3);
   assert.equal(hexPress.repsLabel, "12–15");
