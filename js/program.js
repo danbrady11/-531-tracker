@@ -43,7 +43,6 @@ export const DAYS = {
     supplemental: "bbb",
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
-      { name: "Incline DB press", sets: 3, repsLabel: "10–12", restCategory: "compound" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Hammer curls", sets: 3, repsLabel: "12" },
     ],
@@ -56,6 +55,7 @@ export const DAYS = {
     accessories: [
       { name: "Incline barbell press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
       { name: "Flat DB press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
+      { name: "Hex press", sets: 3, repsLabel: "12–15" },
       { name: "Seated cable row (close grip)", sets: 5, repsLabel: "10" },
       { name: "Lat pulldown", sets: 4, repsLabel: "10", restCategory: "compound" },
       { name: "Straight-arm pulldown", sets: 3, repsLabel: "12", restCategory: "compound" },

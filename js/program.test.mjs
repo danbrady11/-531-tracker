@@ -61,11 +61,12 @@ test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, 
   assert.equal(legacy?.kind, "recovery");
 });
 
-test("Accessory day (4) opens with Incline barbell press and Flat DB press, both compound rest, ahead of the rest of the day", () => {
+test("Accessory day (4) opens with Incline barbell press, Flat DB press, Hex press, ahead of the rest of the day", () => {
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Incline barbell press",
     "Flat DB press",
+    "Hex press",
     "Seated cable row (close grip)",
     "Lat pulldown",
     "Straight-arm pulldown",
@@ -80,4 +81,17 @@ test("Accessory day (4) opens with Incline barbell press and Flat DB press, both
   assert.equal(flatDb.repsLabel, "8–10");
   assert.equal(flatDb.sets, 3);
   assert.equal(restCategoryFor(flatDb), "compound");
+});
+
+test("Hex press sits between Flat DB press and Seated cable row, 3x12-15 at isolation (default) rest", () => {
+  const hexPress = accessoryDefFor(4, "Hex press");
+  assert.equal(hexPress.sets, 3);
+  assert.equal(hexPress.repsLabel, "12–15");
+  assert.equal(restCategoryFor(hexPress), "isolation");
+});
+
+test("Press day (3) no longer has Incline DB press — just Chin-ups, Cable rope overhead extension, Hammer curls", () => {
+  const names = dayInfo(3).accessories.map((a) => a.name);
+  assert.deepEqual(names, ["Chin-ups", "Cable rope overhead extension", "Hammer curls"]);
+  assert.equal(accessoryDefFor(3, "Incline DB press"), null);
 });
