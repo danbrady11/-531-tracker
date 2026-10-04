@@ -60,6 +60,20 @@ export function bbbSets(trainingMax, weekIndex, bbbPercentage, roundingIncrement
   return Array.from({ length: 5 }, () => ({ type: "bbb", percentage: bbbPercentage, weight, targetReps: 10, reps: null }));
 }
 
+/**
+ * Alternate supplemental for a day offering one (e.g. belt squat instead of
+ * BBB on Squat day): flat sets x reps with no calculated weight — a belt
+ * squat machine loads independently of the barbell lift, so there's nothing
+ * to derive from TM. Weight/reps are filled in from the lift's own prior
+ * logs instead (see state.js's lastSupplementalLog). Deload = none, same as
+ * BBB/FSL.
+ */
+export function altSupplementalSets(weekIndex, type, sets, targetReps) {
+  const scheme = WEEK_SCHEMES[weekIndex];
+  if (scheme.deload) return [];
+  return Array.from({ length: sets }, () => ({ type, weight: null, targetReps, reps: null, completed: false }));
+}
+
 /** Warm-up: 40/50/60% x 5/5/3 of TM. */
 export function warmupSets(trainingMax, roundingIncrement) {
   const scheme = [{ pct: 0.40, reps: 5 }, { pct: 0.50, reps: 5 }, { pct: 0.60, reps: 3 }];

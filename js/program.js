@@ -27,6 +27,10 @@ export const DAYS = {
     kind: "main",
     lift: "squat",
     supplemental: "bbb",
+    // Selectable per-session instead of the default BBB — a belt squat
+    // machine loads independently of the back squat, so its sets carry no
+    // calculated weight (see calc.js's altSupplementalSets).
+    supplementalAlt: { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 },
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
       { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound", variants: ["Swiss ball leg curl", "Machine leg curl"] },

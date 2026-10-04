@@ -7,6 +7,7 @@ import {
   mainSetsForWeek,
   fslSets,
   bbbSets,
+  altSupplementalSets,
   warmupSets,
   epleyE1RM,
   repsToBeatE1RM,
@@ -119,6 +120,15 @@ test("bbbSets: deadlift and press have no BBB minimum", () => {
 
   const lightPress = bbbSets(150, 1, 0.5, 5, "press");
   assert.ok(lightPress.every((s) => s.weight === 75));
+});
+
+test("altSupplementalSets: N sets x reps with no calculated weight, none on deload", () => {
+  const week1 = altSupplementalSets(1, "beltSquat", 5, 10);
+  assert.equal(week1.length, 5);
+  assert.ok(week1.every((s) => s.type === "beltSquat" && s.weight === null && s.targetReps === 10 && s.reps === null && s.completed === false));
+
+  const deload = altSupplementalSets(4, "beltSquat", 5, 10);
+  assert.equal(deload.length, 0);
 });
 
 test("warmupSets: 40/50/60% x 5/5/3", () => {

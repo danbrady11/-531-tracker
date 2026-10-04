@@ -71,8 +71,16 @@ function mainSetRow(set, index, barWeight, bestE1RM) {
     </div>`;
 }
 
+// set.percentage is only present for TM-derived schemes (BBB/FSL) — an alt
+// scheme like belt squat has no percentage or barbell plate math, since its
+// weight comes from the machine's own loading, not the main lift's TM.
 function supplementalRow(set, index, kind, barWeight) {
   const doneClass = set.completed ? "done" : "";
+  const meta =
+    set.percentage != null
+      ? `<div class="set-meta">${Math.round(set.percentage * 100)}% · target ${set.targetReps} reps</div>
+         <div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>`
+      : `<div class="set-meta">target ${set.targetReps} reps</div>`;
   return `
     <div class="set-row" data-supp-index="${index}">
       <button class="set-check ${doneClass}" data-action="toggle-supp" data-kind="${kind}" data-index="${index}" aria-label="Mark set complete">
@@ -80,10 +88,9 @@ function supplementalRow(set, index, kind, barWeight) {
       </button>
       <div class="set-info">
         <div class="set-weight">
-          <input class="set-input" type="number" inputmode="decimal" step="5" value="${set.weight}" data-action="supp-weight" data-kind="${kind}" data-index="${index}" style="width:72px" /> lb
+          <input class="set-input" type="number" inputmode="decimal" step="5" value="${set.weight ?? ""}" data-action="supp-weight" data-kind="${kind}" data-index="${index}" style="width:72px" /> lb
         </div>
-        <div class="set-meta">${Math.round(set.percentage * 100)}% · target ${set.targetReps} reps</div>
-        <div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>
+        ${meta}
       </div>
       <input class="set-input" type="number" inputmode="numeric" placeholder="${set.targetReps}" value="${set.reps ?? ""}" data-action="supp-reps" data-kind="${kind}" data-index="${index}" />
     </div>`;
@@ -231,13 +238,19 @@ const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", access
  * last day of that week, which is all that's needed to land on the correct
  * next week — or next cycle's week 1, if that was the cycle's last week).
  * Skips a lift entirely if it has no completed history yet.
+ *
+ * A lift whose last session falls in the currently active cycle picks up
+ * that cycle's manual deload override (if any) — it's known and applies.
+ * For any other (older) cycle there's no override on record, so this falls
+ * back to the settings-based parity rule, same as before.
  */
-function liftStatusHtml(sessionLogs, settings) {
+function liftStatusHtml(sessionLogs, settings, currentCycleState) {
   const lastByLift = lastCompletedByLift(sessionLogs);
   const rows = LIFT_ORDER.filter((lift) => lastByLift[lift])
     .map((lift) => {
       const info = lastByLift[lift];
-      const { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings);
+      const deloadOverride = info.cycleNumber === currentCycleState.cycleNumber ? currentCycleState.deloadOverride : null;
+      const { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings, deloadOverride);
       return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${cycleState.cycleNumber}:W${cycleState.weekIndex} next</span></div>`;
     })
     .join("");
@@ -284,7 +297,7 @@ function renderSplashScreen(root, ctx) {
       </label>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
     </div>
-    ${liftStatusHtml(state.sessionLogs, state.settings)}
+    ${liftStatusHtml(state.sessionLogs, state.settings, state.cycleState)}
     <div class="section-label">Or pick a different day</div>
     <div class="card splash-other-days">${otherDaysHtml}</div>
   `;
@@ -338,13 +351,28 @@ function renderWorkoutScreen(root, ctx) {
     </div>`;
 
     if (day.supplemental) {
-      const label = day.supplemental === "fsl" ? "FSL 3×8" : `BBB 5×10 (${Math.round(state.settings.bbbPercentage * 100)}%)`;
+      const activeType = session.supplementalType || day.supplemental;
+      const isAlt = day.supplementalAlt && activeType === day.supplementalAlt.type;
+      const label = isAlt
+        ? `${escapeHtml(day.supplementalAlt.label)} ${day.supplementalAlt.sets}×${day.supplementalAlt.targetReps}`
+        : day.supplemental === "fsl"
+          ? "FSL 3×8"
+          : `BBB 5×10 (${Math.round(state.settings.bbbPercentage * 100)}%)`;
       // Falls back to "main" for FSL, which no day currently uses and has no
-      // rest duration of its own in Settings — only BBB was asked for.
-      const suppRestSec = restTimerSec[day.supplemental] ?? restTimerSec.main;
+      // rest duration of its own in Settings — only BBB was asked for. An alt
+      // scheme (e.g. belt squat) reuses BBB's rest duration rather than
+      // adding its own Settings category for one exercise.
+      const suppRestSec = isAlt ? restTimerSec.bbb : restTimerSec[day.supplemental] ?? restTimerSec.main;
+      const toggleHtml = day.supplementalAlt
+        ? `<div class="pill-tabs" style="margin-bottom:8px;">
+            <button class="pill-tab ${!isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplemental}">${day.supplemental === "fsl" ? "FSL" : "BBB"}</button>
+            <button class="pill-tab ${isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplementalAlt.type}">${escapeHtml(day.supplementalAlt.label)}</button>
+          </div>`
+        : "";
       html += `<div class="card">
         <h3>${label}</h3>
-        ${session.supplementalSets.map((s, i) => supplementalRow(s, i, day.supplemental, bar)).join("")}
+        ${toggleHtml}
+        ${session.supplementalSets.map((s, i) => supplementalRow(s, i, activeType, bar)).join("")}
         <div class="btn-row">${restButtonHtml(suppRestSec, `${label} rest`)}</div>
       </div>`;
     }
@@ -449,6 +477,9 @@ function wireActions(root, ctx) {
   );
   root.querySelectorAll('[data-action="supp-reps"]').forEach((el) =>
     el.addEventListener("change", () => actions.setSupplementalReps(el.dataset.kind, Number(el.dataset.index), el.value === "" ? null : Number(el.value)))
+  );
+  root.querySelectorAll('[data-action="set-supplemental-type"]').forEach((el) =>
+    el.addEventListener("click", () => actions.setSupplementalType(el.dataset.type))
   );
 
   root.querySelectorAll('[data-action="toggle-accessory"]').forEach((el) =>

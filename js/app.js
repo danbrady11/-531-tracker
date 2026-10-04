@@ -1,6 +1,6 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
-import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
+import { mainSetsForWeek, fslSets, bbbSets, altSupplementalSets, LIFTS } from "./calc.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, lastSupplementalLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
 import { dayInfo, DAY_COUNT, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
@@ -166,6 +166,30 @@ function persist() {
   scheduleCloudPush();
 }
 
+// Builds a fresh supplementalSets array for the given type. BBB/FSL
+// recompute from the current TM/week (their weight is TM-derived and
+// week-dependent); an alt type (e.g. belt squat) pulls its own prior logs
+// instead, since its weight has nothing to do with the main lift's TM.
+// Shared by buildSessionForPosition (new session) and actions below
+// (switching an in-progress or already-logged session's supplemental type).
+function supplementalSetsForType(type, day, weekIndex) {
+  const roundingIncrement = state.settings.roundingIncrement;
+  const tm = state.trainingMaxes[day.lift]?.currentValue;
+  if (type === "fsl") {
+    return fslSets(tm, weekIndex, roundingIncrement).map((s) => ({ ...s, completed: false }));
+  }
+  if (type === "bbb") {
+    return bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement, day.lift).map((s) => ({ ...s, completed: false }));
+  }
+  if (day.supplementalAlt && type === day.supplementalAlt.type) {
+    return altSupplementalSets(weekIndex, type, day.supplementalAlt.sets, day.supplementalAlt.targetReps).map((entry, i) => {
+      const prefill = lastSupplementalLog(state.sessionLogs, type, i);
+      return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
+    });
+  }
+  return [];
+}
+
 // Builds a fresh, unlogged session for an arbitrary cycle position — not
 // necessarily state.cycleState. Choosing a day from the splash screen builds
 // one for the chosen day without touching the persisted pointer; only an
@@ -173,22 +197,22 @@ function persist() {
 function buildSessionForPosition(position) {
   const { dayIndex, weekIndex } = position;
   const day = dayInfo(dayIndex);
-  const roundingIncrement = state.settings.roundingIncrement;
 
   let mainSets = [];
   let supplementalSets = [];
 
   if (day.kind === "main") {
-    const tm = state.trainingMaxes[day.lift].currentValue;
-    mainSets = mainSetsForWeek(tm, weekIndex, roundingIncrement).map((s) => ({ ...s, completed: false }));
-    if (day.supplemental === "fsl") {
-      supplementalSets = fslSets(tm, weekIndex, roundingIncrement).map((s) => ({ ...s, completed: false }));
-    } else if (day.supplemental === "bbb") {
-      supplementalSets = bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement, day.lift).map((s) => ({ ...s, completed: false }));
+    mainSets = mainSetsForWeek(state.trainingMaxes[day.lift].currentValue, weekIndex, state.settings.roundingIncrement).map((s) => ({
+      ...s,
+      completed: false,
+    }));
+    if (day.supplemental) {
+      supplementalSets = supplementalSetsForType(day.supplemental, day, weekIndex);
     }
   }
 
   const session = newSessionLog(position, mainSets, supplementalSets, day.accessories);
+  if (day.supplemental) session.supplementalType = day.supplemental;
   session.accessorySets = session.accessorySets.map((entry) => {
     const prefill = lastAccessoryLog(state.sessionLogs, entry.exerciseName, entry.setIndex);
     return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
@@ -348,6 +372,11 @@ function detailLine(label, weight, reps, completed) {
   return `<div class="session-detail-line"><span>${escapeHtml(label)}</span><span>${amount} ${check}</span></div>`;
 }
 
+const SUPPLEMENTAL_LABELS = { fsl: "FSL", bbb: "Boring But Big", beltSquat: "Belt Squat" };
+function supplementalLabel(type) {
+  return SUPPLEMENTAL_LABELS[type] || "Supplemental";
+}
+
 function renderSessionDetail(log) {
   const day = dayInfo(log.dayIndex);
   let html = `<h2>${escapeHtml(day.name)}</h2>
@@ -365,7 +394,7 @@ function renderSessionDetail(log) {
       .join("")}</div>`;
   }
   if (log.supplementalSets?.length) {
-    const label = log.supplementalSets[0].type === "fsl" ? "FSL" : "Boring But Big";
+    const label = supplementalLabel(log.supplementalSets[0].type);
     html += `<div class="session-detail-group"><h4>${label}</h4>${log.supplementalSets
       .map((s, i) => detailLine(`Set ${i + 1}`, s.weight, s.reps, s.completed))
       .join("")}</div>`;
@@ -426,8 +455,15 @@ function renderSessionEditForm(draft) {
       .map((s, i) => editSetRow("main", i, s.weight, s.actualReps, s.completed, i + 1, `${Math.round(s.percentage * 100)}%${s.isAmrap ? " AMRAP" : ""}`))
       .join("")}</div>`;
   }
+  if (day.supplementalAlt) {
+    const currentType = draft.supplementalSets?.[0]?.type || day.supplemental;
+    html += `<div class="pill-tabs" style="margin-bottom:8px;">
+      <button class="pill-tab ${currentType === day.supplemental ? "active" : ""}" data-hedit-action="set-supplemental-type" data-type="${day.supplemental}">${supplementalLabel(day.supplemental)}</button>
+      <button class="pill-tab ${currentType === day.supplementalAlt.type ? "active" : ""}" data-hedit-action="set-supplemental-type" data-type="${day.supplementalAlt.type}">${escapeHtml(day.supplementalAlt.label)}</button>
+    </div>`;
+  }
   if (draft.supplementalSets?.length) {
-    const label = draft.supplementalSets[0].type === "fsl" ? "FSL" : "Boring But Big";
+    const label = supplementalLabel(draft.supplementalSets[0].type);
     html += `<div class="session-detail-group"><h4>${label}</h4>${draft.supplementalSets
       .map((s, i) => editSetRow("supp", i, s.weight, s.reps, s.completed, i + 1))
       .join("")}</div>`;
@@ -478,6 +514,20 @@ function wireSessionEditForm(root, draft) {
       const val = el.value === "" ? null : Number(el.value);
       if (el.dataset.section === "main") item.actualReps = val;
       else item.reps = val;
+    })
+  );
+  root.querySelectorAll('[data-hedit-action="set-supplemental-type"]').forEach((el) =>
+    el.addEventListener("click", () => {
+      const day = dayInfo(draft.dayIndex);
+      const currentType = draft.supplementalSets?.[0]?.type || day.supplemental;
+      if (currentType === el.dataset.type) return;
+      // The set rows redraw below (different type = possibly different shape),
+      // so sync whatever's already been typed/toggled elsewhere in the form
+      // into draft first — those fields only otherwise sync at Save time.
+      draft.completed = root.querySelector("#hedit-completed").checked;
+      draft.notes = root.querySelector("#hedit-notes").value;
+      draft.supplementalSets = supplementalSetsForType(el.dataset.type, day, draft.weekIndex);
+      showModal(renderSessionEditForm(draft), (freshRoot) => wireSessionEditForm(freshRoot, draft));
     })
   );
   root.querySelector("#hedit-save").addEventListener("click", () => {
@@ -560,6 +610,19 @@ const actions = {
   setSupplementalReps(kind, index, value) {
     state.currentSession.supplementalSets[index].reps = value;
     persist();
+  },
+  // Switches the current session's supplemental scheme (e.g. BBB <-> belt
+  // squat on Squat day) — rebuilds supplementalSets fresh for the new type
+  // rather than relabeling in place, since BBB/FSL's weight is calculated
+  // from TM while an alt type's isn't, so the two shapes aren't compatible.
+  setSupplementalType(type) {
+    const session = state.currentSession;
+    if (session.supplementalType === type) return;
+    const day = dayInfo(session.dayIndex);
+    session.supplementalType = type;
+    session.supplementalSets = supplementalSetsForType(type, day, session.weekIndex);
+    persist();
+    renderCurrentView();
   },
   toggleAccessorySet(exerciseName, setIndex) {
     // Defensive: an in-progress session built before an accessory's schema

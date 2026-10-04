@@ -91,3 +91,10 @@ test("Press day (3) no longer has Incline DB press — just Chin-ups, Cable rope
   assert.deepEqual(names, ["Chin-ups", "Cable rope overhead extension", "Hammer curls"]);
   assert.equal(accessoryDefFor(3, "Incline DB press"), null);
 });
+
+test("Squat day offers belt squat as an alternate to BBB: 5x10, no other day has this option", () => {
+  assert.deepEqual(dayInfo(2).supplementalAlt, { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 });
+  for (const dayIndex of [1, 3, 5]) {
+    assert.equal(dayInfo(dayIndex).supplementalAlt, undefined, `day ${dayIndex} should have no supplementalAlt`);
+  }
+});

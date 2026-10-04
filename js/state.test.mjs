@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries } from "./state.js";
+import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, lastSupplementalLog, parseBulkWeightEntries } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -190,4 +190,35 @@ test("parseBulkWeightEntries: skips blank lines and unparseable garbage without 
 
 test("parseBulkWeightEntries: empty input returns an empty array", () => {
   assert.deepEqual(parseBulkWeightEntries(""), []);
+});
+
+function logWithSupplemental(date, type, sets) {
+  return {
+    id: date, date, dayIndex: 2, weekIndex: 1, cycleNumber: 1, lift: "squat", completed: true,
+    mainSets: [], supplementalSets: sets, accessorySets: [], notes: "",
+  };
+}
+
+test("lastSupplementalLog: returns the matching-type set at the same position, most recent log first", () => {
+  const logs = [
+    logWithSupplemental("2026-01-01T00:00:00Z", "beltSquat", [
+      { type: "beltSquat", weight: 180, targetReps: 10, reps: 10, completed: true },
+      { type: "beltSquat", weight: 180, targetReps: 10, reps: 9, completed: true },
+    ]),
+    logWithSupplemental("2026-01-08T00:00:00Z", "beltSquat", [
+      { type: "beltSquat", weight: 190, targetReps: 10, reps: 10, completed: true },
+    ]),
+  ];
+  assert.equal(lastSupplementalLog(logs, "beltSquat", 0).weight, 190);
+  // Index 1 doesn't exist in the most recent log — falls back to its last available entry.
+  assert.equal(lastSupplementalLog(logs, "beltSquat", 1).weight, 190);
+});
+
+test("lastSupplementalLog: ignores logs of a different supplemental type", () => {
+  const logs = [logWithSupplemental("2026-01-01T00:00:00Z", "bbb", [{ type: "bbb", percentage: 0.5, weight: 135, targetReps: 10, reps: 10 }])];
+  assert.equal(lastSupplementalLog(logs, "beltSquat", 0), null);
+});
+
+test("lastSupplementalLog: returns null when nothing has been logged for that type yet", () => {
+  assert.equal(lastSupplementalLog([], "beltSquat", 0), null);
 });
