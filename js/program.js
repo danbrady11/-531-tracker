@@ -12,6 +12,10 @@ export const DAYS = {
     kind: "main",
     lift: "bench",
     supplemental: "bbb",
+    // Selectable per-session instead of the default barbell BBB — same
+    // percentage-of-TM math (see calc.js's bbbSets), applied to the total
+    // weight of both dumbbells. Not barbell-loaded, so no plate breakdown.
+    supplementalAlt: { type: "dbFlatPress", label: "DB flat press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
@@ -27,9 +31,10 @@ export const DAYS = {
     kind: "main",
     lift: "squat",
     supplemental: "bbb",
-    // Selectable per-session instead of the default BBB — a belt squat
-    // machine loads independently of the back squat, so its sets carry no
-    // calculated weight (see calc.js's altSupplementalSets).
+    // Selectable per-session instead of the default barbell BBB — same
+    // percentage-of-TM math (see calc.js's bbbSets), tagged under its own
+    // type so belt squat history never merges with squat BBB history. Not
+    // barbell-loaded, so no plate breakdown.
     supplementalAlt: { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 },
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
@@ -71,6 +76,10 @@ export const DAYS = {
     kind: "main",
     lift: "deadlift",
     supplemental: "bbb",
+    // Selectable per-session instead of the default barbell BBB — same
+    // percentage-of-TM math (see calc.js's bbbSets). Barbell-loaded (across
+    // the hips), so it still gets a plate breakdown like standard BBB.
+    supplementalAlt: { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true },
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },

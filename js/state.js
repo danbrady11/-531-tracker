@@ -83,23 +83,6 @@ export function lastAccessoryLog(sessionLogs, exerciseName, setIndex) {
   return null;
 }
 
-/**
- * Most recent logged value for a given alternate-supplemental type + set
- * index (e.g. belt squat instead of BBB), for prefill when switching into
- * it — mirrors lastAccessoryLog, keyed by type+array position since
- * supplementalSets don't carry an exerciseName or their own setIndex field.
- * A log's supplementalSets are always uniformly one type, so filtering by
- * type never shifts the remaining entries' positions.
- */
-export function lastSupplementalLog(sessionLogs, type, setIndex) {
-  for (let i = sessionLogs.length - 1; i >= 0; i--) {
-    const sets = (sessionLogs[i].supplementalSets || []).filter((s) => s.type === type && s.weight != null);
-    if (sets.length === 0) continue;
-    return sets[setIndex] || sets[sets.length - 1];
-  }
-  return null;
-}
-
 /** AMRAP history for a lift: [{date, weekIndex, weight, reps, e1rm}], oldest first. */
 export function amrapHistory(sessionLogs, lift) {
   return sessionLogs

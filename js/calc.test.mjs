@@ -7,7 +7,6 @@ import {
   mainSetsForWeek,
   fslSets,
   bbbSets,
-  altSupplementalSets,
   warmupSets,
   epleyE1RM,
   repsToBeatE1RM,
@@ -93,13 +92,39 @@ test("fslSets: 3x8 at week's first percentage, none on deload", () => {
 test("bbbSets: 5x10 at configured % of TM, none on deload", () => {
   const week1 = bbbSets(200, 1, 0.5, 5);
   assert.equal(week1.length, 5);
-  assert.ok(week1.every((s) => s.weight === 100 && s.targetReps === 10));
+  assert.ok(week1.every((s) => s.weight === 100 && s.targetReps === 10 && s.type === "bbb"));
 
   const customPct = bbbSets(200, 1, 0.6, 5);
   assert.equal(customPct[0].weight, 120);
 
   const deload = bbbSets(200, 4, 0.5, 5);
   assert.equal(deload.length, 0);
+});
+
+test("bbbSets: an alternate movement (same lift/percentage) tags entries with its own type, same weight math", () => {
+  const beltSquat = bbbSets(200, 1, 0.5, 5, "squat", "beltSquat");
+  assert.equal(beltSquat.length, 5);
+  assert.ok(beltSquat.every((s) => s.type === "beltSquat" && s.weight === 135 && s.targetReps === 10)); // floor applies by default
+  assert.equal(beltSquat.length, bbbSets(200, 1, 0.5, 5, "squat").length);
+
+  const hipThrust = bbbSets(300, 1, 0.5, 5, "deadlift", "hipThrust");
+  assert.ok(hipThrust.every((s) => s.type === "hipThrust" && s.weight === 150)); // no floor for deadlift
+
+  const deload = bbbSets(200, 4, 0.5, 5, "squat", "beltSquat");
+  assert.equal(deload.length, 0);
+});
+
+test("bbbSets: applyMinWeight=false skips the barbell-specific floor for a non-barbell alt (e.g. DB flat press, belt squat)", () => {
+  // 50% of 160 = 80, below the 135 bench floor — but a dumbbell total has no
+  // "empty bar" equivalent, so an alt movement can opt out of the floor.
+  const dbFlatPress = bbbSets(160, 1, 0.5, 5, "bench", "dbFlatPress", false);
+  assert.ok(dbFlatPress.every((s) => s.weight === 80));
+
+  const beltSquatNoFloor = bbbSets(200, 1, 0.5, 5, "squat", "beltSquat", false);
+  assert.ok(beltSquatNoFloor.every((s) => s.weight === 100));
+
+  // The default (applyMinWeight omitted) still floors it.
+  assert.ok(bbbSets(160, 1, 0.5, 5, "bench", "dbFlatPress").every((s) => s.weight === 135));
 });
 
 test("bbbSets: bench and squat never drop below the 135 lb BBB minimum, even at low TMs", () => {
@@ -120,15 +145,6 @@ test("bbbSets: deadlift and press have no BBB minimum", () => {
 
   const lightPress = bbbSets(150, 1, 0.5, 5, "press");
   assert.ok(lightPress.every((s) => s.weight === 75));
-});
-
-test("altSupplementalSets: N sets x reps with no calculated weight, none on deload", () => {
-  const week1 = altSupplementalSets(1, "beltSquat", 5, 10);
-  assert.equal(week1.length, 5);
-  assert.ok(week1.every((s) => s.type === "beltSquat" && s.weight === null && s.targetReps === 10 && s.reps === null && s.completed === false));
-
-  const deload = altSupplementalSets(4, "beltSquat", 5, 10);
-  assert.equal(deload.length, 0);
 });
 
 test("warmupSets: 40/50/60% x 5/5/3", () => {

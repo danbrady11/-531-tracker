@@ -52,26 +52,28 @@ export function fslSets(trainingMax, weekIndex, roundingIncrement) {
 // compute a BBB weight too light to be useful.
 export const BBB_MIN_WEIGHT = { bench: 135, squat: 135 };
 
-/** BBB supplemental: 5x10 at settings.bbbPercentage of TM (or the lift's BBB minimum, if higher). Deload = none. */
-export function bbbSets(trainingMax, weekIndex, bbbPercentage, roundingIncrement, lift) {
-  const scheme = WEEK_SCHEMES[weekIndex];
-  if (scheme.deload) return [];
-  const weight = Math.max(computeWeight(trainingMax, bbbPercentage, roundingIncrement), BBB_MIN_WEIGHT[lift] ?? 0);
-  return Array.from({ length: 5 }, () => ({ type: "bbb", percentage: bbbPercentage, weight, targetReps: 10, reps: null }));
-}
-
 /**
- * Alternate supplemental for a day offering one (e.g. belt squat instead of
- * BBB on Squat day): flat sets x reps with no calculated weight — a belt
- * squat machine loads independently of the barbell lift, so there's nothing
- * to derive from TM. Weight/reps are filled in from the lift's own prior
- * logs instead (see state.js's lastSupplementalLog). Deload = none, same as
- * BBB/FSL.
+ * BBB supplemental: 5x10 at settings.bbbPercentage of TM (or the lift's BBB
+ * minimum, if higher and applyMinWeight is on). Deload = none.
+ *
+ * `type` tags the entries (default "bbb") so a day's alternate movement for
+ * the same slot — e.g. belt squat instead of standard BBB on Squat day, DB
+ * flat press on Bench day, hip thrust on Deadlift day — can share this exact
+ * same percentage-of-TM calculation while still being tracked as its own
+ * distinct exercise: its logs carry a different `type` than plain "bbb", so
+ * prefill/history for one never merges into the other's.
+ *
+ * `applyMinWeight` (default true) gates the BBB_MIN_WEIGHT floor, which is
+ * specifically "empty bar + smallest plates" reasoning for a barbell — pass
+ * false for a non-barbell alt (dumbbells, a machine), where that floor has
+ * no physical equivalent and would just produce a nonsense weight.
  */
-export function altSupplementalSets(weekIndex, type, sets, targetReps) {
+export function bbbSets(trainingMax, weekIndex, bbbPercentage, roundingIncrement, lift, type = "bbb", applyMinWeight = true) {
   const scheme = WEEK_SCHEMES[weekIndex];
   if (scheme.deload) return [];
-  return Array.from({ length: sets }, () => ({ type, weight: null, targetReps, reps: null, completed: false }));
+  const floor = applyMinWeight ? BBB_MIN_WEIGHT[lift] ?? 0 : 0;
+  const weight = Math.max(computeWeight(trainingMax, bbbPercentage, roundingIncrement), floor);
+  return Array.from({ length: 5 }, () => ({ type, percentage: bbbPercentage, weight, targetReps: 10, reps: null }));
 }
 
 /** Warm-up: 40/50/60% x 5/5/3 of TM. */

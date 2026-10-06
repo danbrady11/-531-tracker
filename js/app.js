@@ -1,6 +1,6 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
-import { mainSetsForWeek, fslSets, bbbSets, altSupplementalSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, lastSupplementalLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
+import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
 import { dayInfo, DAY_COUNT, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
@@ -166,28 +166,26 @@ function persist() {
   scheduleCloudPush();
 }
 
-// Builds a fresh supplementalSets array for the given type. BBB/FSL
-// recompute from the current TM/week (their weight is TM-derived and
-// week-dependent); an alt type (e.g. belt squat) pulls its own prior logs
-// instead, since its weight has nothing to do with the main lift's TM.
-// Shared by buildSessionForPosition (new session) and actions below
-// (switching an in-progress or already-logged session's supplemental type).
+// Builds a fresh supplementalSets array for the given type. FSL recomputes
+// its own percentage; BBB and any alternate movement for the same slot (e.g.
+// belt squat/DB flat press/hip thrust instead of standard BBB) share the
+// exact same percentage-of-TM calculation — bbbSets just tags the entries
+// with `type` so each movement's history/prefill stays its own. Shared by
+// buildSessionForPosition (new session) and actions below (switching an
+// in-progress or already-logged session's supplemental type).
 function supplementalSetsForType(type, day, weekIndex) {
   const roundingIncrement = state.settings.roundingIncrement;
   const tm = state.trainingMaxes[day.lift]?.currentValue;
   if (type === "fsl") {
     return fslSets(tm, weekIndex, roundingIncrement).map((s) => ({ ...s, completed: false }));
   }
-  if (type === "bbb") {
-    return bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement, day.lift).map((s) => ({ ...s, completed: false }));
-  }
-  if (day.supplementalAlt && type === day.supplementalAlt.type) {
-    return altSupplementalSets(weekIndex, type, day.supplementalAlt.sets, day.supplementalAlt.targetReps).map((entry, i) => {
-      const prefill = lastSupplementalLog(state.sessionLogs, type, i);
-      return { ...entry, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null };
-    });
-  }
-  return [];
+  const isAlt = day.supplementalAlt && type === day.supplementalAlt.type;
+  // The barbell-specific BBB floor only makes sense for a barbell movement
+  // — standard BBB, or an alt explicitly flagged barbell (e.g. hip thrust).
+  // A dumbbell/machine alt (DB flat press, belt squat) has no "empty bar"
+  // equivalent, so it skips the floor entirely.
+  const applyMinWeight = !isAlt || !!day.supplementalAlt.barbell;
+  return bbbSets(tm, weekIndex, state.settings.bbbPercentage, roundingIncrement, day.lift, type, applyMinWeight).map((s) => ({ ...s, completed: false }));
 }
 
 // Builds a fresh, unlogged session for an arbitrary cycle position — not
@@ -372,7 +370,7 @@ function detailLine(label, weight, reps, completed) {
   return `<div class="session-detail-line"><span>${escapeHtml(label)}</span><span>${amount} ${check}</span></div>`;
 }
 
-const SUPPLEMENTAL_LABELS = { fsl: "FSL", bbb: "Boring But Big", beltSquat: "Belt Squat" };
+const SUPPLEMENTAL_LABELS = { fsl: "FSL", bbb: "Boring But Big", beltSquat: "Belt Squat", dbFlatPress: "DB Flat Press", hipThrust: "Hip Thrust" };
 function supplementalLabel(type) {
   return SUPPLEMENTAL_LABELS[type] || "Supplemental";
 }

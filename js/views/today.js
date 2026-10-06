@@ -71,16 +71,16 @@ function mainSetRow(set, index, barWeight, bestE1RM) {
     </div>`;
 }
 
-// set.percentage is only present for TM-derived schemes (BBB/FSL) — an alt
-// scheme like belt squat has no percentage or barbell plate math, since its
-// weight comes from the machine's own loading, not the main lift's TM.
-function supplementalRow(set, index, kind, barWeight) {
+// Every scheme (BBB and any alternate movement sharing its percentage-of-TM
+// math) carries a percentage, but only a barbell-loaded one — standard BBB,
+// or an alt explicitly flagged `barbell: true` like hip thrust — has a bar
+// to break into plates. A dumbbell or machine movement (DB flat press, belt
+// squat) shows the percentage/reps line but skips the nonsensical "Bar + "
+// breakdown, since there's no bar.
+function supplementalRow(set, index, kind, barWeight, showPlateMath) {
   const doneClass = set.completed ? "done" : "";
-  const meta =
-    set.percentage != null
-      ? `<div class="set-meta">${Math.round(set.percentage * 100)}% · target ${set.targetReps} reps</div>
-         <div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>`
-      : `<div class="set-meta">target ${set.targetReps} reps</div>`;
+  const meta = `<div class="set-meta">${Math.round(set.percentage * 100)}% · target ${set.targetReps} reps</div>
+    ${showPlateMath ? `<div class="plate-strip">${plateStripText(set.weight, barWeight)}</div>` : ""}`;
   return `
     <div class="set-row" data-supp-index="${index}">
       <button class="set-check ${doneClass}" data-action="toggle-supp" data-kind="${kind}" data-index="${index}" aria-label="Mark set complete">
@@ -353,11 +353,15 @@ function renderWorkoutScreen(root, ctx) {
     if (day.supplemental) {
       const activeType = session.supplementalType || day.supplemental;
       const isAlt = day.supplementalAlt && activeType === day.supplementalAlt.type;
+      const bbbPct = Math.round(state.settings.bbbPercentage * 100);
+      // The alt shares BBB's exact percentage-of-TM math (see calc.js's
+      // bbbSets), so its heading shows the same percentage — just under its
+      // own movement name and 5x10 instead of "BBB".
       const label = isAlt
-        ? `${escapeHtml(day.supplementalAlt.label)} ${day.supplementalAlt.sets}×${day.supplementalAlt.targetReps}`
+        ? `${escapeHtml(day.supplementalAlt.label)} ${day.supplementalAlt.sets}×${day.supplementalAlt.targetReps} (${bbbPct}%)`
         : day.supplemental === "fsl"
           ? "FSL 3×8"
-          : `BBB 5×10 (${Math.round(state.settings.bbbPercentage * 100)}%)`;
+          : `BBB 5×10 (${bbbPct}%)`;
       // Falls back to "main" for FSL, which no day currently uses and has no
       // rest duration of its own in Settings — only BBB was asked for. An alt
       // scheme (e.g. belt squat) reuses BBB's rest duration rather than
@@ -369,10 +373,14 @@ function renderWorkoutScreen(root, ctx) {
             <button class="pill-tab ${isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplementalAlt.type}">${escapeHtml(day.supplementalAlt.label)}</button>
           </div>`
         : "";
+      // Standard BBB is always barbell-loaded; an alt only gets the plate
+      // breakdown if it's explicitly flagged as barbell too (e.g. hip
+      // thrust) — a dumbbell or machine movement has no bar to break down.
+      const showPlateMath = !isAlt || !!day.supplementalAlt.barbell;
       html += `<div class="card">
         <h3>${label}</h3>
         ${toggleHtml}
-        ${session.supplementalSets.map((s, i) => supplementalRow(s, i, activeType, bar)).join("")}
+        ${session.supplementalSets.map((s, i) => supplementalRow(s, i, activeType, bar, showPlateMath)).join("")}
         <div class="btn-row">${restButtonHtml(suppRestSec, `${label} rest`)}</div>
       </div>`;
     }
