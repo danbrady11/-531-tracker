@@ -50,6 +50,10 @@ export const DAYS = {
     kind: "main",
     lift: "press",
     supplemental: "bbb",
+    // Selectable per-session instead of the default barbell BBB — same
+    // percentage-of-TM math (see calc.js's bbbSets), applied to the total
+    // weight of both dumbbells. Not barbell-loaded, so no plate breakdown.
+    supplementalAlt: { type: "seatedDbPress", label: "Seated DB press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },

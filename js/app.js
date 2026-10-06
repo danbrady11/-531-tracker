@@ -370,7 +370,14 @@ function detailLine(label, weight, reps, completed) {
   return `<div class="session-detail-line"><span>${escapeHtml(label)}</span><span>${amount} ${check}</span></div>`;
 }
 
-const SUPPLEMENTAL_LABELS = { fsl: "FSL", bbb: "Boring But Big", beltSquat: "Belt Squat", dbFlatPress: "DB Flat Press", hipThrust: "Hip Thrust" };
+const SUPPLEMENTAL_LABELS = {
+  fsl: "FSL",
+  bbb: "Boring But Big",
+  beltSquat: "Belt Squat",
+  dbFlatPress: "DB Flat Press",
+  hipThrust: "Hip Thrust",
+  seatedDbPress: "Seated DB Press",
+};
 function supplementalLabel(type) {
   return SUPPLEMENTAL_LABELS[type] || "Supplemental";
 }

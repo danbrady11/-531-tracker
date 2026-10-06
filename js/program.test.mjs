@@ -92,10 +92,10 @@ test("Press day (3) no longer has Incline DB press — just Chin-ups, Cable rope
   assert.equal(accessoryDefFor(3, "Incline DB press"), null);
 });
 
-test("Each main lift day with a BBB alternate has its own distinct movement; Press has none", () => {
+test("Every main lift day has its own distinct BBB alternate movement", () => {
   assert.deepEqual(dayInfo(1).supplementalAlt, { type: "dbFlatPress", label: "DB flat press", sets: 5, targetReps: 10 });
   assert.deepEqual(dayInfo(2).supplementalAlt, { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 });
+  assert.deepEqual(dayInfo(3).supplementalAlt, { type: "seatedDbPress", label: "Seated DB press", sets: 5, targetReps: 10 });
   assert.deepEqual(dayInfo(5).supplementalAlt, { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true });
-  assert.equal(dayInfo(3).supplementalAlt, undefined, "Press should have no supplementalAlt");
   assert.equal(dayInfo(4).supplementalAlt, undefined, "Accessory day has no main lift, so no supplementalAlt");
 });
