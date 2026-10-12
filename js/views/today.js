@@ -231,6 +231,11 @@ function addExerciseControls(customExercises) {
 
 const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
 
+// True if a is strictly earlier than b in cycle/week order.
+function isBeforePosition(a, b) {
+  return a.cycleNumber < b.cycleNumber || (a.cycleNumber === b.cycleNumber && a.weekIndex < b.weekIndex);
+}
+
 /**
  * Per-lift "when you'll next train it" strip for the splash screen: one step
  * past its most recent completed session, reusing advanceCycle's own
@@ -241,8 +246,14 @@ const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", access
  *
  * A lift whose last session falls in the currently active cycle picks up
  * that cycle's manual deload override (if any) — it's known and applies.
- * For any other (older) cycle there's no override on record, so this falls
- * back to the settings-based parity rule, same as before.
+ * For any OLDER (already-completed) cycle, there's no override on record
+ * any more (it resets to null once that cycle finishes), so the projection
+ * falls back to the settings-based parity rule — which can land on a week
+ * that cycle never actually had (e.g. "C2:W4" when deload was manually
+ * turned off and that cycle really ended after week 3). Rather than show
+ * that stale, now-impossible position, clamp the result forward to the
+ * current actual cycle position: a lift can never really be "next" earlier
+ * than where the whole program already stands.
  */
 function liftStatusHtml(sessionLogs, settings, currentCycleState) {
   const lastByLift = lastCompletedByLift(sessionLogs);
@@ -250,7 +261,10 @@ function liftStatusHtml(sessionLogs, settings, currentCycleState) {
     .map((lift) => {
       const info = lastByLift[lift];
       const deloadOverride = info.cycleNumber === currentCycleState.cycleNumber ? currentCycleState.deloadOverride : null;
-      const { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings, deloadOverride);
+      let { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings, deloadOverride);
+      if (isBeforePosition(cycleState, currentCycleState)) {
+        cycleState = { cycleNumber: currentCycleState.cycleNumber, weekIndex: currentCycleState.weekIndex };
+      }
       return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${cycleState.cycleNumber}:W${cycleState.weekIndex} next</span></div>`;
     })
     .join("");
