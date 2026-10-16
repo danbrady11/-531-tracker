@@ -1,4 +1,4 @@
-// Static description of the 5-day rolling cycle. Day numbers are 1-5.
+// Static description of the 4-day rolling cycle. Day numbers are 1-4.
 
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
@@ -18,10 +18,9 @@ export const DAYS = {
     supplementalAlt: { type: "dbFlatPress", label: "DB flat press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
-      { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10" },
+      { name: "Seated cable row (wide/neutral)", sets: 4, repsLabel: "10" },
+      { name: "Incline barbell press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
       { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
-      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
-      { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Curls", sets: 3, repsLabel: "12" },
     ],
@@ -38,9 +37,9 @@ export const DAYS = {
     supplementalAlt: { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 },
     accessories: [
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
-      { name: "Swiss ball leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound", variants: ["Swiss ball leg curl", "Machine leg curl"] },
+      { name: "Machine leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound" },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Standing calf raise", "Seated calf raise"] },
-      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
+      { name: "Lateral raise", sets: 5, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
@@ -56,11 +55,56 @@ export const DAYS = {
     supplementalAlt: { type: "seatedDbPress", label: "Seated DB press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
+      { name: "Lat pulldown", sets: 3, repsLabel: "10–12", restCategory: "compound" },
+      { name: "Straight-arm pulldown", sets: 3, repsLabel: "12", restCategory: "compound" },
+      { name: "Hex press", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Hammer curls", sets: 3, repsLabel: "12" },
     ],
   },
   4: {
+    name: "Deadlift",
+    kind: "main",
+    lift: "deadlift",
+    supplemental: "bbb",
+    // Selectable per-session instead of the default barbell BBB — same
+    // percentage-of-TM math (see calc.js's bbbSets). Barbell-loaded (across
+    // the hips), so it still gets a plate breakdown like standard BBB.
+    supplementalAlt: { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true },
+    accessories: [
+      { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
+      { name: "Seated cable row (close grip)", sets: 4, repsLabel: "10" },
+      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
+      { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
+      { name: "Lateral raise", sets: 5, repsLabel: "15", supersetRole: "a" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
+      { name: "Cable crunch", sets: 3, repsLabel: "12" },
+    ],
+  },
+};
+
+// Day numbers removed from the active program over time, kept here so old
+// session logs that still reference them — remapped to these reserved slots
+// by storage.js's migrate() rather than left colliding with a new day's
+// number — render a correct name/content instead of crashing. Never
+// included in DAY_COUNT or any day-cycling logic, so nothing new is ever
+// built for one.
+const LEGACY_DAYS = {
+  6: {
+    name: "Recovery",
+    kind: "recovery",
+    lift: null,
+    supplemental: null,
+    accessories: [
+      { name: "Yoga", sets: null, repsLabel: "" },
+      { name: "Zone 2", sets: null, repsLabel: "30 min" },
+    ],
+  },
+  // The dedicated Accessory day, dropped when the program moved from a
+  // 5-day to a 4-day rolling cycle — its exercises were redistributed across
+  // Bench/Press/Deadlift above. Content frozen exactly as it was so old logs
+  // still display what was actually performed.
+  7: {
     name: "Accessory",
     kind: "accessory",
     lift: null,
@@ -75,44 +119,9 @@ export const DAYS = {
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
     ],
   },
-  5: {
-    name: "Deadlift",
-    kind: "main",
-    lift: "deadlift",
-    supplemental: "bbb",
-    // Selectable per-session instead of the default barbell BBB — same
-    // percentage-of-TM math (see calc.js's bbbSets). Barbell-loaded (across
-    // the hips), so it still gets a plate breakdown like standard BBB.
-    supplementalAlt: { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true },
-    accessories: [
-      { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
-      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
-      { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
-      { name: "Cable crunch", sets: 3, repsLabel: "12" },
-    ],
-  },
 };
 
-// Day numbers removed from the active program (Recovery, dropped entirely)
-// but kept here so old session logs that still reference them — remapped to
-// this reserved slot by storage.js's migrate() rather than left colliding
-// with a new day's number — render a correct name/content instead of
-// crashing. Never included in DAY_COUNT or any day-cycling logic, so nothing
-// new is ever built for one.
-const LEGACY_DAYS = {
-  6: {
-    name: "Recovery",
-    kind: "recovery",
-    lift: null,
-    supplemental: null,
-    accessories: [
-      { name: "Yoga", sets: null, repsLabel: "" },
-      { name: "Zone 2", sets: null, repsLabel: "30 min" },
-    ],
-  },
-};
-
-export const DAY_COUNT = 5;
+export const DAY_COUNT = 4;
 export const WEEK_COUNT = 4;
 
 export function dayInfo(dayIndex) {

@@ -100,6 +100,27 @@ function remapDayIndexForLivePointer(dayIndex) {
   return dayIndex - 1;
 }
 
+// One-time program restructure: the dedicated Accessory day (old day 4)
+// dropped entirely, its exercises redistributed across Bench/Press/Deadlift,
+// shrinking the cycle from 5 days to 4. Bench/Squat/Press keep their day
+// numbers; old day 5 (Deadlift) becomes day 4. For session HISTORY, the old
+// Accessory day (4) remaps to day 7 — a reserved slot (see program.js's
+// LEGACY_DAYS) that preserves those logs under their own name instead of
+// colliding with whatever day 4 (now Deadlift) means going forward.
+const DAY_COUNT_4_REMAP_HISTORY = { 1: 1, 2: 2, 3: 3, 4: 7, 5: 4 };
+
+function remapDayIndexForHistoryV2(dayIndex) {
+  return DAY_COUNT_4_REMAP_HISTORY[dayIndex] ?? dayIndex;
+}
+
+// For the live cycle pointer, old day 4 (Accessory) has nowhere sensible to
+// stay — it no longer exists — so it resolves forward to whatever would run
+// next (old day 5, Deadlift, now day 4) rather than to the history-only
+// legacy slot. Day 5 maps to the same new day 4 for the same reason.
+function remapDayIndexForLivePointerV2(dayIndex) {
+  return dayIndex <= 3 ? dayIndex : 4;
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -158,6 +179,22 @@ export function migrate(state) {
       }
     }
     merged._dayCount5MigrationV1 = true;
+  }
+
+  if (!state._dayCount4MigrationV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForHistoryV2(log.dayIndex) }));
+    merged.cycleState = { ...merged.cycleState, dayIndex: remapDayIndexForLivePointerV2(merged.cycleState.dayIndex) };
+    // Every remaining day's exercise list changed shape in this restructure
+    // (set counts, additions, removals), so an in-progress session built
+    // under the old 5-day program — whichever day it was on — no longer
+    // matches any current day's definition. Rather than try to reconcile
+    // mismatched accessorySets, drop it; a fresh, correctly-shaped session
+    // gets built automatically next time Today renders (see
+    // ensureCurrentSession in app.js). No completed history is affected.
+    if (merged.currentSession) {
+      merged.currentSession = null;
+    }
+    merged._dayCount4MigrationV1 = true;
   }
 
   return merged;

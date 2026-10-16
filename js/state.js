@@ -18,7 +18,7 @@ export function effectiveWeekCount(cycleNumber, settings, deloadOverride = null)
   return cycleNumber % 2 === 0 ? WEEK_COUNT : WEEK_COUNT - 1;
 }
 
-/** Advance the cycle by one day. Wrapping day 6->1 advances the week; wrapping the cycle's last week completes it. */
+/** Advance the cycle by one day. Wrapping past the last day (DAY_COUNT) advances the week; wrapping the cycle's last week completes it. */
 export function advanceCycle(cycleState, settings, deloadOverride = null) {
   let { dayIndex, weekIndex, cycleNumber } = cycleState;
   let cycleCompleted = false;
