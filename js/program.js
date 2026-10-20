@@ -1,4 +1,4 @@
-// Static description of the 4-day rolling cycle. Day numbers are 1-4.
+// Static description of the 5-day rolling cycle. Day numbers are 1-5.
 
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
@@ -21,9 +21,9 @@ export const DAYS = {
       { name: "Incline barbell press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
       { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
-      { name: "Curls", sets: 3, repsLabel: "12" },
+      { name: "Curls", sets: 4, repsLabel: "12" },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
-      { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
     ],
   },
   2: {
@@ -59,11 +59,26 @@ export const DAYS = {
       { name: "Seated cable row (wide/neutral)", sets: 5, repsLabel: "10", restCategory: "compound" },
       { name: "Straight-arm pulldown", sets: 3, repsLabel: "12", restCategory: "compound" },
       { name: "Hex press", sets: 3, repsLabel: "12–15" },
-      { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
-      { name: "Hammer curls", sets: 3, repsLabel: "12" },
+      { name: "Rope pushdown", sets: 3, repsLabel: "12" },
     ],
   },
   4: {
+    name: "Accessory",
+    kind: "accessory",
+    lift: null,
+    supplemental: null,
+    accessories: [
+      { name: "Leg press", sets: 4, repsLabel: "10–12", restCategory: "compound", cue: "Belt squat if no leg press." },
+      { name: "Seated leg curl", sets: 4, repsLabel: "10–12" },
+      { name: "Standing calf raise", sets: 4, repsLabel: "15" },
+      { name: "Pec deck", sets: 3, repsLabel: "12–15" },
+      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
+      { name: "Incline DB curl", sets: 4, repsLabel: "10–12" },
+      { name: "Cable crunch", sets: 3, repsLabel: "12" },
+    ],
+  },
+  5: {
     name: "Deadlift",
     kind: "main",
     lift: "deadlift",
@@ -120,7 +135,7 @@ const LEGACY_DAYS = {
   },
 };
 
-export const DAY_COUNT = 4;
+export const DAY_COUNT = 5;
 export const WEEK_COUNT = 4;
 
 export function dayInfo(dayIndex) {

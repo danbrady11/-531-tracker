@@ -152,6 +152,7 @@ test("migrate renames matching entries in customExercises and de-duplicates", ()
 test("migrate renames an in-progress currentSession's accessorySets too", () => {
   const state = {
     _dayCount4MigrationV1: true, // isolate from the day-count-4 migration, which drops currentSession entirely
+    _dayCount5ReintroduceV1: true, // isolate from the day-count-5 reintroduce migration, which also drops it
     sessionLogs: [],
     currentSession: { ...sessionWith([{ exerciseName: "Rear delt", setIndex: 0, weight: 20, reps: 15, completed: false }]), completed: false },
   };
@@ -160,14 +161,15 @@ test("migrate renames an in-progress currentSession's accessorySets too", () => 
 });
 
 // These three tests exercise the day-order rotation in isolation, so they
-// pre-flag the later day-count-5 and day-count-4 migrations as already done
-// — otherwise a plain migrate() call here would run all three one-time
-// migrations back to back, and the asserted dayIndex values would need to
-// reflect the later shifts too.
+// pre-flag the later day-count-5, day-count-4, and day-count-5-reintroduce
+// migrations as already done — otherwise a plain migrate() call here would
+// run all four one-time migrations back to back, and the asserted dayIndex
+// values would need to reflect the later shifts too.
 test("migrate rotates old dayIndex values to match the reordered program (Deadlift day1 -> day6, etc.)", () => {
   const state = {
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // was Deadlift
       { ...sessionWith([]), dayIndex: 6 }, // was Accessory
@@ -181,7 +183,12 @@ test("migrate rotates old dayIndex values to match the reordered program (Deadli
 });
 
 test("migrate's day-order rotation runs exactly once (flagged), not repeatedly on reload", () => {
-  const once = migrate({ _dayCount5MigrationV1: true, _dayCount4MigrationV1: true, sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }] });
+  const once = migrate({
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }],
+  });
   assert.equal(once.sessionLogs[0].dayIndex, 6);
   assert.equal(once._dayOrderRotatedV1, true);
 
@@ -194,6 +201,7 @@ test("migrate rotates an in-progress currentSession's dayIndex too", () => {
   const state = {
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 5 }, // was Press
   };
@@ -203,12 +211,13 @@ test("migrate rotates an in-progress currentSession's dayIndex too", () => {
 
 // The day-count-5 migration runs after day-order-rotation (real users already
 // have _dayOrderRotatedV1: true) and before day-count-4, so these pre-flag
-// both of those as done and test only the restructure: Recovery dropped,
-// everything else renumbered.
+// both of those (and the later reintroduce migration) as done and test only
+// the restructure: Recovery dropped, everything else renumbered.
 test("migrate remaps completed history onto the 5-day cycle, sending old Recovery (day 2) to the reserved legacy day 6", () => {
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // was Recovery
@@ -227,6 +236,7 @@ test("migrate advances cycleState past the removed Recovery day to Squat's new s
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3 },
   };
@@ -238,6 +248,7 @@ test("migrate shifts a non-Recovery cycleState dayIndex down past the removed sl
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 6, weekIndex: 1, cycleNumber: 1 }, // was Deadlift
   };
@@ -249,6 +260,7 @@ test("migrate discards an in-progress Recovery currentSession (nothing to contin
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 2 },
   };
@@ -260,6 +272,7 @@ test("migrate shifts a non-Recovery in-progress currentSession's dayIndex down p
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 4 }, // was Press
   };
@@ -268,7 +281,12 @@ test("migrate shifts a non-Recovery in-progress currentSession's dayIndex down p
 });
 
 test("migrate's day-count-5 restructure runs exactly once, not repeatedly on reload", () => {
-  const once = migrate({ _dayOrderRotatedV1: true, _dayCount4MigrationV1: true, sessionLogs: [{ ...sessionWith([]), dayIndex: 3 }] });
+  const once = migrate({
+    _dayOrderRotatedV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [{ ...sessionWith([]), dayIndex: 3 }],
+  });
   assert.equal(once.sessionLogs[0].dayIndex, 2);
   assert.equal(once._dayCount5MigrationV1, true);
 
@@ -278,11 +296,13 @@ test("migrate's day-count-5 restructure runs exactly once, not repeatedly on rel
 
 // The day-count-4 migration (Accessory day removed, 5-day -> 4-day cycle)
 // runs after both earlier migrations (real users already have both flags
-// set), so these pre-flag those as done and test only this restructure.
+// set) and before the later reintroduce migration, so these pre-flag those
+// as done and test only this restructure.
 test("migrate remaps completed history onto the 4-day cycle, sending old Accessory (day 4) to the reserved legacy day 7", () => {
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -300,6 +320,7 @@ test("migrate advances cycleState past the removed Accessory day to Deadlift's n
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 4, weekIndex: 2, cycleNumber: 3 },
   };
@@ -311,6 +332,7 @@ test("migrate shifts a non-Accessory cycleState dayIndex (old Deadlift, day 5) d
   const state = {
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 5, weekIndex: 1, cycleNumber: 1 },
   };
@@ -320,7 +342,13 @@ test("migrate shifts a non-Accessory cycleState dayIndex (old Deadlift, day 5) d
 
 test("migrate leaves a cycleState dayIndex of 1-3 untouched (Bench/Squat/Press keep their numbers)", () => {
   for (const dayIndex of [1, 2, 3]) {
-    const migrated = migrate({ _dayOrderRotatedV1: true, _dayCount5MigrationV1: true, sessionLogs: [], cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 } });
+    const migrated = migrate({
+      _dayOrderRotatedV1: true,
+      _dayCount5MigrationV1: true,
+      _dayCount5ReintroduceV1: true,
+      sessionLogs: [],
+      cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 },
+    });
     assert.equal(migrated.cycleState.dayIndex, dayIndex);
   }
 });
@@ -330,6 +358,7 @@ test("migrate discards ANY in-progress currentSession during the day-count-4 res
     const state = {
       _dayOrderRotatedV1: true,
       _dayCount5MigrationV1: true,
+      _dayCount5ReintroduceV1: true,
       sessionLogs: [],
       currentSession: { ...sessionWith([]), dayIndex },
     };
@@ -342,6 +371,7 @@ test("migrate's day-count-4 restructure runs exactly once, not repeatedly on rel
   const once = migrate({
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 5 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 4);
@@ -349,4 +379,78 @@ test("migrate's day-count-4 restructure runs exactly once, not repeatedly on rel
 
   const twice = migrate(once);
   assert.equal(twice.sessionLogs[0].dayIndex, 4, "must not shift a second time");
+});
+
+// The day-count-5-reintroduce migration (new Accessory day inserted back in
+// at day 4, Deadlift pushed from day 4 to day 5) runs after all three
+// earlier migrations (real users already have those flags set), so these
+// pre-flag them as done and test only this restructure.
+test("migrate remaps completed history onto the reintroduced 5-day cycle, shifting old Deadlift (day 4) to day 5", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    sessionLogs: [
+      { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
+      { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
+      { ...sessionWith([]), dayIndex: 3 }, // Press, unchanged
+      { ...sessionWith([]), dayIndex: 4 }, // was Deadlift
+    ],
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [1, 2, 3, 5]);
+  assert.equal(migrated._dayCount5ReintroduceV1, true);
+});
+
+test("migrate advances cycleState from old Deadlift (day 4) to its new slot (day 5), same week/cycle", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    sessionLogs: [],
+    cycleState: { dayIndex: 4, weekIndex: 2, cycleNumber: 3 },
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.cycleState, { dayIndex: 5, weekIndex: 2, cycleNumber: 3, deloadOverride: null });
+});
+
+test("migrate leaves a cycleState dayIndex of 1-3 untouched during the reintroduce migration", () => {
+  for (const dayIndex of [1, 2, 3]) {
+    const migrated = migrate({
+      _dayOrderRotatedV1: true,
+      _dayCount5MigrationV1: true,
+      _dayCount4MigrationV1: true,
+      sessionLogs: [],
+      cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 },
+    });
+    assert.equal(migrated.cycleState.dayIndex, dayIndex);
+  }
+});
+
+test("migrate discards ANY in-progress currentSession during the reintroduce restructure, regardless of which day it was on", () => {
+  for (const dayIndex of [1, 2, 3, 4]) {
+    const state = {
+      _dayOrderRotatedV1: true,
+      _dayCount5MigrationV1: true,
+      _dayCount4MigrationV1: true,
+      sessionLogs: [],
+      currentSession: { ...sessionWith([]), dayIndex },
+    };
+    const migrated = migrate(state);
+    assert.equal(migrated.currentSession, null, `dayIndex ${dayIndex}`);
+  }
+});
+
+test("migrate's day-count-5-reintroduce restructure runs exactly once, not repeatedly on reload", () => {
+  const once = migrate({
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
+  });
+  assert.equal(once.sessionLogs[0].dayIndex, 5);
+  assert.equal(once._dayCount5ReintroduceV1, true);
+
+  const twice = migrate(once);
+  assert.equal(twice.sessionLogs[0].dayIndex, 5, "must not shift a second time");
 });

@@ -128,6 +128,19 @@ function remapDayIndexForLivePointerV2(dayIndex) {
   return dayIndex <= 3 ? dayIndex : 4;
 }
 
+// One-time program restructure: a new Accessory day (fresh content, not the
+// one dropped in the 4-day collapse above) is inserted back in at day 4,
+// pushing Deadlift from day 4 to day 5 and growing the cycle back to 5 days.
+// Bench/Squat/Press keep their day numbers unchanged — only Deadlift shifts.
+// Unlike the removal migrations above, this one only ever shifts day 4 to
+// day 5; it never needs a reserved legacy slot since nothing is being
+// dropped, just inserted.
+const DAY_COUNT_5_REINTRODUCE_REMAP = { 1: 1, 2: 2, 3: 3, 4: 5 };
+
+function remapDayIndexForDayCount5Reintroduce(dayIndex) {
+  return DAY_COUNT_5_REINTRODUCE_REMAP[dayIndex] ?? dayIndex;
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -202,6 +215,22 @@ export function migrate(state) {
       merged.currentSession = null;
     }
     merged._dayCount4MigrationV1 = true;
+  }
+
+  if (!state._dayCount5ReintroduceV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForDayCount5Reintroduce(log.dayIndex) }));
+    merged.cycleState = { ...merged.cycleState, dayIndex: remapDayIndexForDayCount5Reintroduce(merged.cycleState.dayIndex) };
+    // Bench and Press both changed shape in this restructure (set/exercise
+    // changes), and Deadlift's dayIndex itself moved from 4 to 5, so an
+    // in-progress session built under the old 4-day program no longer
+    // matches any current day's position/definition regardless of which
+    // day it was on. Drop it; a fresh, correctly-shaped session gets built
+    // automatically next time Today renders (see ensureCurrentSession in
+    // app.js). No completed history is affected.
+    if (merged.currentSession) {
+      merged.currentSession = null;
+    }
+    merged._dayCount5ReintroduceV1 = true;
   }
 
   return merged;
