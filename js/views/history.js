@@ -1,6 +1,16 @@
-import { bodyweightRollingAverage, combinedLiftMetricSeries, parseBulkWeightEntries } from "../state.js";
+import { bodyweightRollingAverage, combinedLiftMetricSeries, accessoryRepVolumeSeries, parseBulkWeightEntries } from "../state.js";
 import { drawLineChart, drawMultiLineChart } from "../chart.js";
 import { LIFT_META, CHART_LIFT_ORDER } from "../lift-meta.js";
+
+// Pull-ups (weighted) lives on Bench day, Chin-ups on Press day — different
+// days, same muscle group — so they're charted together here rather than
+// folded into the main-lift volume chart above, which only covers the four
+// barbell lifts.
+const PULLUP_CHINUP_META = {
+  "Pull-ups (weighted)": { label: "Pull-ups", colorVar: "--pink" },
+  "Chin-ups": { label: "Chin-ups", colorVar: "--rehab" },
+};
+const PULLUP_CHINUP_EXERCISES = Object.keys(PULLUP_CHINUP_META);
 
 function shortDate(iso) {
   const d = new Date(iso);
@@ -22,6 +32,13 @@ export function renderHistory(root, ctx) {
       <div class="chart-wrap"><canvas class="chart-canvas" id="lift-chart"></canvas></div>
       <div id="lift-chart-empty"></div>
       <div class="chart-legend" id="lift-legend"></div>
+    </div>
+
+    <div class="card">
+      <h3>Pull-up / chin-up volume</h3>
+      <div class="chart-wrap"><canvas class="chart-canvas" id="pullup-chinup-chart"></canvas></div>
+      <div id="pullup-chinup-chart-empty"></div>
+      <div class="chart-legend" id="pullup-chinup-legend"></div>
     </div>
 
     <div class="card">
@@ -50,6 +67,7 @@ export function renderHistory(root, ctx) {
   `;
 
   renderLiftChart(root, state);
+  renderPullupChinupChart(root, state);
   renderBodyweight(root, state, ctx);
 
   root.querySelectorAll("#metric-tabs .pill-tab").forEach((btn) =>
@@ -98,6 +116,29 @@ function renderLiftChart(root, state) {
   root.querySelector("#lift-legend").innerHTML = CHART_LIFT_ORDER.map(
     (lift) =>
       `<span class="legend-item"><span class="legend-swatch" style="background:var(${LIFT_META[lift].colorVar})"></span>${LIFT_META[lift].label}</span>`
+  ).join("");
+}
+
+function renderPullupChinupChart(root, state) {
+  const { xLabels, series } = accessoryRepVolumeSeries(state.sessionLogs, PULLUP_CHINUP_EXERCISES);
+  const canvas = root.querySelector("#pullup-chinup-chart");
+  const hasData = series.some((s) => s.values.some((v) => v != null));
+
+  canvas.hidden = !hasData;
+  if (hasData) {
+    drawMultiLineChart(canvas, {
+      xLabels,
+      series: series.map((s) => ({ ...s, colorVar: PULLUP_CHINUP_META[s.name].colorVar })),
+      suffix: " reps",
+    });
+  }
+  root.querySelector("#pullup-chinup-chart-empty").innerHTML = hasData
+    ? ""
+    : `<div class="empty-state">No pull-up or chin-up sessions logged yet.</div>`;
+
+  root.querySelector("#pullup-chinup-legend").innerHTML = PULLUP_CHINUP_EXERCISES.map(
+    (name) =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:var(${PULLUP_CHINUP_META[name].colorVar})"></span>${PULLUP_CHINUP_META[name].label}</span>`
   ).join("");
 }
 

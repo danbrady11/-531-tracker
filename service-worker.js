@@ -1,4 +1,4 @@
-const CACHE_NAME = "531-tracker-v58";
+const CACHE_NAME = "531-tracker-v59";
 const PRECACHE_URLS = [
   "./",
   "./index.html",

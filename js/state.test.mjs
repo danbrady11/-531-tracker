@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries } from "./state.js";
+import { advanceCycle, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -192,3 +192,55 @@ test("parseBulkWeightEntries: empty input returns an empty array", () => {
   assert.deepEqual(parseBulkWeightEntries(""), []);
 });
 
+
+function pullupChinupSession({ weekIndex, cycleNumber, exerciseName, reps }) {
+  return sessionWith({
+    weekIndex,
+    cycleNumber,
+    accessorySets: reps.map((r, i) => ({ exerciseName, setIndex: i, weight: null, reps: r, completed: true })),
+  });
+}
+
+test("accessoryRepVolumeSeries: sums all of a session's sets for the named exercise, not just one", () => {
+  const logs = [pullupChinupSession({ weekIndex: 1, cycleNumber: 1, exerciseName: "Pull-ups (weighted)", reps: [8, 7, 6, 5] })];
+  const { xLabels, series } = accessoryRepVolumeSeries(logs, ["Pull-ups (weighted)", "Chin-ups"]);
+  assert.deepEqual(xLabels, ["C1W1"]);
+  const pullups = series.find((s) => s.name === "Pull-ups (weighted)");
+  assert.deepEqual(pullups.values, [26]);
+});
+
+test("accessoryRepVolumeSeries: tracks Pull-ups and Chin-ups as separate series aligned on a shared week axis", () => {
+  const logs = [
+    pullupChinupSession({ weekIndex: 1, cycleNumber: 1, exerciseName: "Pull-ups (weighted)", reps: [8, 7] }),
+    pullupChinupSession({ weekIndex: 3, cycleNumber: 1, exerciseName: "Chin-ups", reps: [10, 9, 8] }),
+  ];
+  const { xLabels, series } = accessoryRepVolumeSeries(logs, ["Pull-ups (weighted)", "Chin-ups"]);
+  assert.deepEqual(xLabels, ["C1W1", "C1W3"]);
+  const pullups = series.find((s) => s.name === "Pull-ups (weighted)");
+  const chinups = series.find((s) => s.name === "Chin-ups");
+  assert.deepEqual(pullups.values, [15, null]);
+  assert.deepEqual(chinups.values, [null, 27]);
+});
+
+test("accessoryRepVolumeSeries: ignores incomplete sets and skipped sessions", () => {
+  const logs = [
+    sessionWith({
+      weekIndex: 1,
+      cycleNumber: 1,
+      accessorySets: [
+        { exerciseName: "Chin-ups", setIndex: 0, weight: null, reps: 10, completed: true },
+        { exerciseName: "Chin-ups", setIndex: 1, weight: null, reps: 8, completed: false },
+      ],
+    }),
+    sessionWith({ weekIndex: 2, cycleNumber: 1, completed: false, accessorySets: [{ exerciseName: "Chin-ups", setIndex: 0, weight: null, reps: 12, completed: true }] }),
+  ];
+  const { xLabels, series } = accessoryRepVolumeSeries(logs, ["Chin-ups"]);
+  assert.deepEqual(xLabels, ["C1W1"]);
+  assert.deepEqual(series.find((s) => s.name === "Chin-ups").values, [10]);
+});
+
+test("accessoryRepVolumeSeries: returns empty series when neither exercise has any history", () => {
+  const { xLabels, series } = accessoryRepVolumeSeries([], ["Pull-ups (weighted)", "Chin-ups"]);
+  assert.deepEqual(xLabels, []);
+  assert.deepEqual(series.map((s) => s.values), [[], []]);
+});

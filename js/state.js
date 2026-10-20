@@ -215,6 +215,50 @@ export function combinedLiftMetricSeries(sessionLogs, metric) {
   return { xLabels, series };
 }
 
+/** Total completed reps across a session's sets of one named accessory exercise. */
+function accessoryRepsInSession(log, exerciseName) {
+  return (log.accessorySets || [])
+    .filter((s) => s.exerciseName === exerciseName && s.completed && s.reps)
+    .reduce((sum, s) => sum + s.reps, 0);
+}
+
+/**
+ * Combined series for a set of named accessory exercises (e.g. Pull-ups and
+ * Chin-ups), aligned to a shared x-axis of program weeks (cycle+week), for
+ * the volume-over-time chart in History. Volume here is total reps logged
+ * for that exercise in a session (bodyweight accessories have no per-set
+ * weight to multiply by) — all of a session's sets for that exercise added
+ * together, not just one set. Each series' values array is the same length
+ * as xLabels; null where that exercise wasn't logged that week.
+ */
+export function accessoryRepVolumeSeries(sessionLogs, exerciseNames) {
+  const weekKey = (log) => `${log.cycleNumber ?? 1}-${log.weekIndex}`;
+  const relevantLogs = sessionLogs.filter(
+    (log) => log.completed && exerciseNames.some((name) => accessoryRepsInSession(log, name) > 0)
+  );
+
+  const keys = [...new Set(relevantLogs.map(weekKey))].sort((a, b) => {
+    const [ac, aw] = a.split("-").map(Number);
+    const [bc, bw] = b.split("-").map(Number);
+    return ac - bc || aw - bw;
+  });
+  const xLabels = keys.map((k) => {
+    const [c, w] = k.split("-");
+    return `C${c}W${w}`;
+  });
+
+  const series = exerciseNames.map((name) => {
+    const byKey = new Map();
+    relevantLogs.forEach((log) => {
+      const reps = accessoryRepsInSession(log, name);
+      if (reps > 0) byKey.set(weekKey(log), reps);
+    });
+    return { name, values: keys.map((k) => (byKey.has(k) ? byKey.get(k) : null)) };
+  });
+
+  return { xLabels, series };
+}
+
 /** Group session logs by calendar date (YYYY-MM-DD, local time) for the Calendar view. */
 export function sessionsByDate(sessionLogs) {
   const map = new Map();
