@@ -130,18 +130,18 @@ test("Squat day (2) accessory order and set counts", () => {
   assert.deepEqual(names, ["RDL", "Machine leg curl", "Calf raise", "Lateral raise", "Reverse pec deck / cable reverse fly", "Cable crunch"]);
 });
 
-test("Press day (3): Seated cable row replaces Lat pulldown; Straight-arm pulldown and Hex press stay moved in from the old Accessory day", () => {
+test("Press day (3): Seated cable row (wide/neutral) replaces Lat pulldown; Straight-arm pulldown and Hex press stay moved in from the old Accessory day", () => {
   const names = dayInfo(3).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Chin-ups",
-    "Seated cable row",
+    "Seated cable row (wide/neutral)",
     "Straight-arm pulldown",
     "Hex press",
     "Cable rope overhead extension",
     "Hammer curls",
   ]);
-  assert.equal(accessoryDefFor(3, "Lat pulldown"), null, "replaced by Seated cable row");
-  const seatedRow = accessoryDefFor(3, "Seated cable row");
+  assert.equal(accessoryDefFor(3, "Lat pulldown"), null, "replaced by Seated cable row (wide/neutral)");
+  const seatedRow = accessoryDefFor(3, "Seated cable row (wide/neutral)");
   assert.equal(seatedRow.sets, 5);
   assert.equal(seatedRow.repsLabel, "10");
   assert.equal(restCategoryFor(seatedRow), "compound");
@@ -157,15 +157,20 @@ test("Press day (3): Seated cable row replaces Lat pulldown; Straight-arm pulldo
   assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly"), null, "Press never has this superset");
 });
 
-test("Deadlift day (4, was day 5): Seated cable row (close grip) removed entirely; no lateral raise/reverse fly superset", () => {
+test("Deadlift day (4, was day 5): Seated cable row (close grip) added back as its own exercise; no lateral raise/reverse fly superset", () => {
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Bulgarian split squat",
+    "Seated cable row (close grip)",
     "Shrugs (straps)",
     "Calf raise",
     "Cable crunch",
   ]);
-  assert.equal(accessoryDefFor(4, "Seated cable row (close grip)"), null, "removed from Deadlift day");
+  const seatedRow = accessoryDefFor(4, "Seated cable row (close grip)");
+  assert.equal(seatedRow.sets, 3);
+  assert.equal(seatedRow.repsLabel, "10–12");
+  assert.equal(restCategoryFor(seatedRow), "compound");
+  assert.equal(seatedRow.cue, "Use straps. Keep torso still, no rocking.");
   assert.equal(dayInfo(4).lift, "deadlift");
   assert.equal(accessoryDefFor(4, "Lateral raise"), null, "moved to Bench");
   assert.equal(accessoryDefFor(4, "Reverse pec deck / cable reverse fly"), null, "moved to Bench");

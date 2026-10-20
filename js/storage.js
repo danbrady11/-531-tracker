@@ -53,8 +53,13 @@ const ACCESSORY_RENAMES = {
   "Face pulls": "Face pulls (optional)",
   "Nordic curl": "Swiss ball leg curl",
   "Overhead tricep extension": "Cable rope overhead extension",
-  "Seated cable row (wide/neutral)": "Seated cable row",
-  "Seated cable row (close grip)": "Seated cable row",
+  // The two cable-row variants briefly merged into one unified "Seated
+  // cable row" entry on Press day; that merged history now carries
+  // forward under Press day's current label. "Seated cable row (close
+  // grip)" is NOT renamed here — it's a distinct, live exercise again
+  // (now on Deadlift day) and must keep its own name/history going
+  // forward.
+  "Seated cable row": "Seated cable row (wide/neutral)",
 };
 
 function renameAccessoryEntries(accessorySets) {
