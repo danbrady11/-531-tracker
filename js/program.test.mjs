@@ -165,7 +165,7 @@ test("the new Accessory day (4) is its own kind, with no lift or supplemental, a
     "Pec deck",
     "Lateral raise",
     "Reverse pec deck / cable reverse fly",
-    "Incline DB curl",
+    "Hammer curls",
     "Cable crunch",
   ]);
 
@@ -190,10 +190,10 @@ test("the new Accessory day (4) is its own kind, with no lift or supplemental, a
   assert.equal(pecDeck.repsLabel, "12–15");
   assert.equal(restCategoryFor(pecDeck), "isolation");
 
-  const inclineCurl = accessoryDefFor(4, "Incline DB curl");
-  assert.equal(inclineCurl.sets, 4);
-  assert.equal(inclineCurl.repsLabel, "10–12");
-  assert.equal(restCategoryFor(inclineCurl), "isolation");
+  const hammerCurls = accessoryDefFor(4, "Hammer curls");
+  assert.equal(hammerCurls.sets, 4);
+  assert.equal(hammerCurls.repsLabel, "10–12");
+  assert.equal(restCategoryFor(hammerCurls), "isolation");
 
   const cableCrunch = accessoryDefFor(4, "Cable crunch");
   assert.equal(cableCrunch.sets, 3);

@@ -74,7 +74,7 @@ export const DAYS = {
       { name: "Pec deck", sets: 3, repsLabel: "12–15" },
       { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
-      { name: "Incline DB curl", sets: 4, repsLabel: "10–12" },
+      { name: "Hammer curls", sets: 4, repsLabel: "10–12" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
