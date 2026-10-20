@@ -38,11 +38,11 @@ test("Lateral raise / Reverse pec deck are a superset pair on Squat and Bench; D
   }
 });
 
-test("Lateral raise / Reverse pec deck set counts are 5x15 / 4x15 on Squat, and 3x15 / 3x15 on Bench", () => {
-  assert.equal(accessoryDefFor(2, "Lateral raise").sets, 5, "Squat");
-  assert.equal(accessoryDefFor(2, "Reverse pec deck / cable reverse fly").sets, 4, "Squat");
-  assert.equal(accessoryDefFor(1, "Lateral raise").sets, 3, "Bench");
-  assert.equal(accessoryDefFor(1, "Reverse pec deck / cable reverse fly").sets, 3, "Bench");
+test("Lateral raise / Reverse pec deck are 4x15 / 4x15 on both Squat and Bench", () => {
+  for (const dayIndex of [1, 2]) {
+    assert.equal(accessoryDefFor(dayIndex, "Lateral raise").sets, 4, `day ${dayIndex}`);
+    assert.equal(accessoryDefFor(dayIndex, "Reverse pec deck / cable reverse fly").sets, 4, `day ${dayIndex}`);
+  }
 });
 
 test("accessoryDefFor matches either calf raise variant name, on both days that offer it", () => {
@@ -99,11 +99,10 @@ test("the Accessory day no longer exists as an active day (1-4 only)", () => {
   }
 });
 
-test("Bench day (1): Incline barbell press moved in, and the lateral raise/reverse fly superset moved in from Deadlift as the last two exercises", () => {
+test("Bench day (1): Incline barbell press moved in, Seated cable row (wide/neutral) removed, lateral raise/reverse fly superset present at 4x15/4x15", () => {
   const names = dayInfo(1).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Pull-ups (weighted)",
-    "Seated cable row (wide/neutral)",
     "Incline barbell press",
     "Cable fly (mid-height)",
     "Cable rope overhead extension",
@@ -111,17 +110,17 @@ test("Bench day (1): Incline barbell press moved in, and the lateral raise/rever
     "Lateral raise",
     "Reverse pec deck / cable reverse fly",
   ]);
-  assert.equal(accessoryDefFor(1, "Seated cable row (wide/neutral)").sets, 4, "was 5x10, now 4x10");
+  assert.equal(accessoryDefFor(1, "Seated cable row (wide/neutral)"), null, "removed from Bench day");
   const incline = accessoryDefFor(1, "Incline barbell press");
   assert.equal(incline.sets, 3);
   assert.equal(incline.repsLabel, "8–10");
   assert.equal(restCategoryFor(incline), "compound");
   const lateral = accessoryDefFor(1, "Lateral raise");
-  assert.equal(lateral.sets, 3);
+  assert.equal(lateral.sets, 4);
   assert.equal(lateral.repsLabel, "15");
   assert.equal(lateral.supersetRole, "a");
   const reverseFly = accessoryDefFor(1, "Reverse pec deck / cable reverse fly");
-  assert.equal(reverseFly.sets, 3);
+  assert.equal(reverseFly.sets, 4);
   assert.equal(reverseFly.repsLabel, "15");
   assert.equal(reverseFly.supersetRole, "b");
 });
@@ -131,20 +130,21 @@ test("Squat day (2) accessory order and set counts", () => {
   assert.deepEqual(names, ["RDL", "Machine leg curl", "Calf raise", "Lateral raise", "Reverse pec deck / cable reverse fly", "Cable crunch"]);
 });
 
-test("Press day (3): Lat pulldown, Straight-arm pulldown, and Hex press moved in from the old Accessory day", () => {
+test("Press day (3): Seated cable row replaces Lat pulldown; Straight-arm pulldown and Hex press stay moved in from the old Accessory day", () => {
   const names = dayInfo(3).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Chin-ups",
-    "Lat pulldown",
+    "Seated cable row",
     "Straight-arm pulldown",
     "Hex press",
     "Cable rope overhead extension",
     "Hammer curls",
   ]);
-  const latPulldown = accessoryDefFor(3, "Lat pulldown");
-  assert.equal(latPulldown.sets, 3, "was 4x10 on the Accessory day, now 3x10-12");
-  assert.equal(latPulldown.repsLabel, "10–12");
-  assert.equal(restCategoryFor(latPulldown), "compound");
+  assert.equal(accessoryDefFor(3, "Lat pulldown"), null, "replaced by Seated cable row");
+  const seatedRow = accessoryDefFor(3, "Seated cable row");
+  assert.equal(seatedRow.sets, 5);
+  assert.equal(seatedRow.repsLabel, "10");
+  assert.equal(restCategoryFor(seatedRow), "compound");
   const straightArm = accessoryDefFor(3, "Straight-arm pulldown");
   assert.equal(straightArm.sets, 3);
   assert.equal(straightArm.repsLabel, "12");
@@ -157,17 +157,15 @@ test("Press day (3): Lat pulldown, Straight-arm pulldown, and Hex press moved in
   assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly"), null, "Press never has this superset");
 });
 
-test("Deadlift day (4, was day 5): Seated cable row (close grip) moved in; the lateral raise/reverse fly superset moved out to Bench", () => {
+test("Deadlift day (4, was day 5): Seated cable row (close grip) removed entirely; no lateral raise/reverse fly superset", () => {
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Bulgarian split squat",
-    "Seated cable row (close grip)",
     "Shrugs (straps)",
     "Calf raise",
     "Cable crunch",
   ]);
-  const seatedRow = accessoryDefFor(4, "Seated cable row (close grip)");
-  assert.equal(seatedRow.sets, 4, "was 5x10 on the Accessory day, now 4x10");
+  assert.equal(accessoryDefFor(4, "Seated cable row (close grip)"), null, "removed from Deadlift day");
   assert.equal(dayInfo(4).lift, "deadlift");
   assert.equal(accessoryDefFor(4, "Lateral raise"), null, "moved to Bench");
   assert.equal(accessoryDefFor(4, "Reverse pec deck / cable reverse fly"), null, "moved to Bench");

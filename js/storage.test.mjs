@@ -108,6 +108,20 @@ test("migrate renames 'Face pulls' history to 'Face pulls (optional)'", () => {
   assert.equal(migrated.sessionLogs[0].accessorySets[0].exerciseName, "Face pulls (optional)");
 });
 
+test("migrate renames both old 'Seated cable row' variants to the unified 'Seated cable row' on Press day", () => {
+  const state = {
+    sessionLogs: [
+      sessionWith([{ exerciseName: "Seated cable row (wide/neutral)", setIndex: 0, weight: 120, reps: 10, completed: true }]),
+      sessionWith([{ exerciseName: "Seated cable row (close grip)", setIndex: 0, weight: 140, reps: 10, completed: true }]),
+    ],
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.sessionLogs[0].accessorySets[0].exerciseName, "Seated cable row");
+  assert.equal(migrated.sessionLogs[0].accessorySets[0].weight, 120);
+  assert.equal(migrated.sessionLogs[1].accessorySets[0].exerciseName, "Seated cable row");
+  assert.equal(migrated.sessionLogs[1].accessorySets[0].weight, 140);
+});
+
 test("migrate leaves other exercise names untouched", () => {
   const state = {
     sessionLogs: [sessionWith([{ exerciseName: "Curls", setIndex: 0, weight: 30, reps: 12, completed: true }])],

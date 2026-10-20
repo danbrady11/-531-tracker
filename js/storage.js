@@ -53,6 +53,8 @@ const ACCESSORY_RENAMES = {
   "Face pulls": "Face pulls (optional)",
   "Nordic curl": "Swiss ball leg curl",
   "Overhead tricep extension": "Cable rope overhead extension",
+  "Seated cable row (wide/neutral)": "Seated cable row",
+  "Seated cable row (close grip)": "Seated cable row",
 };
 
 function renameAccessoryEntries(accessorySets) {

@@ -18,13 +18,12 @@ export const DAYS = {
     supplementalAlt: { type: "dbFlatPress", label: "DB flat press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Pull-ups (weighted)", sets: 4, repsLabel: "6–10", restCategory: "compound" },
-      { name: "Seated cable row (wide/neutral)", sets: 4, repsLabel: "10" },
       { name: "Incline barbell press", sets: 3, repsLabel: "8–10", restCategory: "compound" },
       { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Curls", sets: 3, repsLabel: "12" },
-      { name: "Lateral raise", sets: 3, repsLabel: "15", supersetRole: "a" },
-      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
+      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
     ],
   },
   2: {
@@ -41,7 +40,7 @@ export const DAYS = {
       { name: "RDL", sets: 3, repsLabel: "10", restCategory: "compound" },
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12", restCategory: "compound" },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Standing calf raise", "Seated calf raise"] },
-      { name: "Lateral raise", sets: 5, repsLabel: "15", supersetRole: "a" },
+      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
@@ -57,7 +56,7 @@ export const DAYS = {
     supplementalAlt: { type: "seatedDbPress", label: "Seated DB press", sets: 5, targetReps: 10 },
     accessories: [
       { name: "Chin-ups", sets: 4, repsLabel: "", restCategory: "compound" },
-      { name: "Lat pulldown", sets: 3, repsLabel: "10–12", restCategory: "compound" },
+      { name: "Seated cable row", sets: 5, repsLabel: "10", restCategory: "compound" },
       { name: "Straight-arm pulldown", sets: 3, repsLabel: "12", restCategory: "compound" },
       { name: "Hex press", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
@@ -75,7 +74,6 @@ export const DAYS = {
     supplementalAlt: { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true },
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
-      { name: "Seated cable row (close grip)", sets: 4, repsLabel: "10" },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
