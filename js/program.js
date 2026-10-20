@@ -23,6 +23,8 @@ export const DAYS = {
       { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "12", cue: "facing away from the stack, slight forward lean, rope split at the top" },
       { name: "Curls", sets: 3, repsLabel: "12" },
+      { name: "Lateral raise", sets: 3, repsLabel: "15", supersetRole: "a" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
     ],
   },
   2: {
@@ -76,8 +78,6 @@ export const DAYS = {
       { name: "Seated cable row (close grip)", sets: 4, repsLabel: "10" },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
-      { name: "Lateral raise", sets: 5, repsLabel: "15", supersetRole: "a" },
-      { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15", supersetRole: "b" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
