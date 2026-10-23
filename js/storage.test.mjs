@@ -454,3 +454,79 @@ test("migrate's day-count-5-reintroduce restructure runs exactly once, not repea
   const twice = migrate(once);
   assert.equal(twice.sessionLogs[0].dayIndex, 5, "must not shift a second time");
 });
+
+// Config additions to an existing day's accessory list (Leg extension added
+// to Squat day) patch an in-progress session in place instead of discarding
+// it like the structural day-count migrations above — nothing else about
+// the day changed shape, so there's nothing to reconcile. All four
+// structural-migration flags are pre-flagged so only this backfill runs.
+const ALL_DAY_MIGRATION_FLAGS = {
+  _dayOrderRotatedV1: true,
+  _dayCount5MigrationV1: true,
+  _dayCount4MigrationV1: true,
+  _dayCount5ReintroduceV1: true,
+};
+
+test("migrate backfills Leg extension onto an in-progress Squat-day session, leaving everything else untouched", () => {
+  const state = {
+    ...ALL_DAY_MIGRATION_FLAGS,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([{ exerciseName: "RDL", setIndex: 0, weight: 135, reps: 10, completed: true }]),
+      dayIndex: 2,
+      mainSets: [{ percentage: 0.65, weight: 90, targetReps: 5, actualReps: 5, isAmrap: false, completed: true }],
+    },
+  };
+  const migrated = migrate(state);
+  const session = migrated.currentSession;
+
+  // Existing entries untouched.
+  assert.equal(session.dayIndex, 2);
+  assert.deepEqual(session.mainSets, state.currentSession.mainSets);
+  const rdl = session.accessorySets.filter((s) => s.exerciseName === "RDL");
+  assert.deepEqual(rdl, [{ exerciseName: "RDL", setIndex: 0, weight: 135, reps: 10, completed: true }]);
+
+  // Leg extension appended: 4 fresh, unlogged sets.
+  const legExtension = session.accessorySets.filter((s) => s.exerciseName === "Leg extension");
+  assert.equal(legExtension.length, 4);
+  legExtension.forEach((s, i) => {
+    assert.equal(s.setIndex, i);
+    assert.equal(s.weight, null);
+    assert.equal(s.reps, null);
+    assert.equal(s.completed, false);
+  });
+
+  // Appended after the existing entries.
+  assert.equal(session.accessorySets[0].exerciseName, "RDL");
+  assert.equal(session.accessorySets[session.accessorySets.length - 1].exerciseName, "Leg extension");
+});
+
+test("migrate's Leg extension backfill prefills from existing history, same as any other accessory", () => {
+  const state = {
+    ...ALL_DAY_MIGRATION_FLAGS,
+    sessionLogs: [{ ...sessionWith([{ exerciseName: "Leg extension", setIndex: 0, weight: 90, reps: 14, completed: true }]), completed: true }],
+    currentSession: { ...sessionWith([]), dayIndex: 2 },
+  };
+  const migrated = migrate(state);
+  const firstSet = migrated.currentSession.accessorySets.find((s) => s.exerciseName === "Leg extension" && s.setIndex === 0);
+  assert.equal(firstSet.weight, 90);
+  assert.equal(firstSet.reps, 14);
+});
+
+test("migrate's Leg extension backfill is idempotent — doesn't duplicate on a second migrate() call", () => {
+  const state = { ...ALL_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 2 } };
+  const once = migrate(state);
+  const twice = migrate(once);
+  assert.equal(twice.currentSession.accessorySets.filter((s) => s.exerciseName === "Leg extension").length, 4);
+});
+
+test("migrate's Leg extension backfill does nothing for a non-Squat-day in-progress session", () => {
+  const state = { ...ALL_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 1 } };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.accessorySets.some((s) => s.exerciseName === "Leg extension"), false);
+});
+
+test("migrate's Leg extension backfill does nothing when there's no in-progress session at all", () => {
+  const migrated = migrate({ ...ALL_DAY_MIGRATION_FLAGS, sessionLogs: [] });
+  assert.equal(migrated.currentSession, undefined);
+});

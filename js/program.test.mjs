@@ -123,9 +123,14 @@ test("Bench day (1): Curls now 4x12, Reverse pec deck now 3x15, everything else 
   assert.equal(reverseFly.supersetRole, "b");
 });
 
-test("Squat day (2) accessory order and set counts unchanged", () => {
+test("Squat day (2): Leg extension added between Machine leg curl and Calf raise", () => {
   const names = dayInfo(2).accessories.map((a) => a.name);
-  assert.deepEqual(names, ["RDL", "Machine leg curl", "Calf raise", "Lateral raise", "Reverse pec deck / cable reverse fly", "Cable crunch"]);
+  assert.deepEqual(names, ["RDL", "Machine leg curl", "Leg extension", "Calf raise", "Lateral raise", "Reverse pec deck / cable reverse fly", "Cable crunch"]);
+  const legExtension = accessoryDefFor(2, "Leg extension");
+  assert.equal(legExtension.sets, 4);
+  assert.equal(legExtension.repsLabel, "12–15");
+  assert.equal(restCategoryFor(legExtension), "isolation");
+  assert.equal(legExtension.cue, "Pause at the top, lower slowly.");
 });
 
 test("Press day (3): Cable rope overhead extension and Hammer curls removed; Rope pushdown added at the end", () => {

@@ -1,4 +1,5 @@
 import { LIFTS } from "./calc.js";
+import { lastAccessoryLog } from "./state.js";
 
 const STORAGE_KEY = "531-tracker-state-v1";
 
@@ -141,6 +142,33 @@ function remapDayIndexForDayCount5Reintroduce(dayIndex) {
   return DAY_COUNT_5_REINTRODUCE_REMAP[dayIndex] ?? dayIndex;
 }
 
+// Config additions to an existing day's accessory list (as opposed to the
+// structural restructures above) don't need a currentSession reset: unlike
+// those, nothing else about the day changes shape, so an in-progress session
+// can just gain the new exercise's sets appended to the end of its
+// accessorySets, leaving every other entry (and anything already logged on
+// it) untouched. Not flagged/versioned like the migrations above — it's
+// naturally idempotent (skipped once the exercise is already present), so it
+// simply runs on every load until the exercise is there.
+const CURRENT_SESSION_ACCESSORY_BACKFILLS = [{ dayIndex: 2, exerciseName: "Leg extension", sets: 4 }];
+
+function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
+  if (!currentSession) return currentSession;
+  let accessorySets = currentSession.accessorySets || [];
+  let changed = false;
+  for (const { dayIndex, exerciseName, sets } of CURRENT_SESSION_ACCESSORY_BACKFILLS) {
+    if (currentSession.dayIndex !== dayIndex) continue;
+    if (accessorySets.some((s) => s.exerciseName === exerciseName)) continue;
+    const newSets = Array.from({ length: sets }, (_, setIndex) => {
+      const prefill = lastAccessoryLog(sessionLogs, exerciseName, setIndex);
+      return { exerciseName, setIndex, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null, completed: false };
+    });
+    accessorySets = [...accessorySets, ...newSets];
+    changed = true;
+  }
+  return changed ? { ...currentSession, accessorySets } : currentSession;
+}
+
 export function migrate(state) {
   const base = defaultState();
   // Shallow-merge one level so new settings/keys added in later versions
@@ -232,6 +260,8 @@ export function migrate(state) {
     }
     merged._dayCount5ReintroduceV1 = true;
   }
+
+  merged.currentSession = backfillCurrentSessionAccessories(merged.currentSession, merged.sessionLogs);
 
   return merged;
 }
