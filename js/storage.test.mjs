@@ -755,8 +755,11 @@ test("migrate backfills Hip thrust onto an in-progress Deadlift-day session, lea
     assert.equal(s.completed, false);
   });
 
+  // Appended after the existing entry — Machine leg curl and Leg extension
+  // are also missing from this seed and get backfilled too (see the
+  // dedicated test for that below), so Hip thrust isn't necessarily last.
   assert.equal(session.accessorySets[0].exerciseName, "Bulgarian split squat");
-  assert.equal(session.accessorySets[session.accessorySets.length - 1].exerciseName, "Hip thrust");
+  assert.ok(session.accessorySets.findIndex((s) => s.exerciseName === "Hip thrust") > 0);
 });
 
 test("migrate's Hip thrust backfill prefills from existing history, same as any other accessory", () => {
@@ -782,4 +785,65 @@ test("migrate's Hip thrust backfill does nothing for a non-Deadlift-day in-progr
   const state = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 1 } };
   const migrated = migrate(state);
   assert.equal(migrated.currentSession.accessorySets.some((s) => s.exerciseName === "Hip thrust"), false);
+});
+
+// Machine leg curl and Leg extension were added to Deadlift day's accessory
+// list in an earlier change but never got a matching current-session
+// backfill entry — a real bug (a session already in progress when that
+// change shipped had no chips to log them at all). Fixed by backfilling
+// both, same as Hip thrust above.
+test("migrate backfills Machine leg curl and Leg extension onto an in-progress Deadlift-day session, leaving everything else untouched", () => {
+  const state = {
+    ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([
+        { exerciseName: "Bulgarian split squat", setIndex: 0, weight: 40, reps: 10, completed: true },
+        { exerciseName: "Seated cable row (close grip)", setIndex: 0, weight: 130, reps: 12, completed: true },
+      ]),
+      dayIndex: 4,
+    },
+  };
+  const migrated = migrate(state);
+  const session = migrated.currentSession;
+
+  const splitSquat = session.accessorySets.filter((s) => s.exerciseName === "Bulgarian split squat");
+  assert.deepEqual(splitSquat, [{ exerciseName: "Bulgarian split squat", setIndex: 0, weight: 40, reps: 10, completed: true }]);
+  const seatedRow = session.accessorySets.filter((s) => s.exerciseName === "Seated cable row (close grip)");
+  assert.deepEqual(seatedRow, [{ exerciseName: "Seated cable row (close grip)", setIndex: 0, weight: 130, reps: 12, completed: true }]);
+
+  const hipThrust = session.accessorySets.filter((s) => s.exerciseName === "Hip thrust");
+  assert.equal(hipThrust.length, 3);
+  const legCurl = session.accessorySets.filter((s) => s.exerciseName === "Machine leg curl");
+  assert.equal(legCurl.length, 3);
+  legCurl.forEach((s, i) => {
+    assert.equal(s.setIndex, i);
+    assert.equal(s.weight, null);
+    assert.equal(s.completed, false);
+  });
+  const legExtension = session.accessorySets.filter((s) => s.exerciseName === "Leg extension");
+  assert.equal(legExtension.length, 3);
+  legExtension.forEach((s, i) => {
+    assert.equal(s.setIndex, i);
+    assert.equal(s.weight, null);
+    assert.equal(s.completed, false);
+  });
+});
+
+test("migrate's Machine leg curl / Leg extension backfill on Deadlift day is idempotent", () => {
+  const state = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 4 } };
+  const once = migrate(state);
+  const twice = migrate(once);
+  assert.equal(twice.currentSession.accessorySets.filter((s) => s.exerciseName === "Machine leg curl").length, 3);
+  assert.equal(twice.currentSession.accessorySets.filter((s) => s.exerciseName === "Leg extension").length, 3);
+});
+
+test("migrate's Deadlift-day Leg extension backfill doesn't interfere with Squat day's separate Leg extension backfill", () => {
+  const squatState = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 2 } };
+  const squatMigrated = migrate(squatState);
+  assert.equal(squatMigrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Leg extension").length, 4, "Squat day gets 4 sets");
+
+  const deadliftState = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 4 } };
+  const deadliftMigrated = migrate(deadliftState);
+  assert.equal(deadliftMigrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Leg extension").length, 3, "Deadlift day gets 3 sets");
 });

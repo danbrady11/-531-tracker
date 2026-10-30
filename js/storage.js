@@ -185,6 +185,8 @@ function remapDayIndexForAccessoryBonusLivePointer(dayIndex) {
 const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
   { dayIndex: 2, exerciseName: "Leg extension", sets: 4 },
   { dayIndex: 4, exerciseName: "Hip thrust", sets: 3 },
+  { dayIndex: 4, exerciseName: "Machine leg curl", sets: 3 },
+  { dayIndex: 4, exerciseName: "Leg extension", sets: 3 },
 ];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
