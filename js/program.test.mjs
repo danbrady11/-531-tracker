@@ -190,9 +190,13 @@ test("Press day (3): Hammer curls added at the end, after Rope pushdown", () => 
   assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly"), null, "Press never has this superset");
 });
 
-test("Deadlift day (4): Machine leg curl and Leg extension added right after Bulgarian split squat", () => {
+test("Deadlift day (4): no BBB; Hip thrust is now a plain 3x10 accessory, Machine leg curl and Leg extension still present", () => {
+  assert.equal(dayInfo(4).supplemental, null, "BBB removed from Deadlift");
+  assert.equal(dayInfo(4).supplementalAlt, undefined, "Hip thrust is no longer a supplemental alt");
+
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
+    "Hip thrust",
     "Bulgarian split squat",
     "Machine leg curl",
     "Leg extension",
@@ -201,6 +205,11 @@ test("Deadlift day (4): Machine leg curl and Leg extension added right after Bul
     "Calf raise",
     "Cable crunch",
   ]);
+
+  const hipThrust = accessoryDefFor(4, "Hip thrust");
+  assert.equal(hipThrust.sets, 3);
+  assert.equal(hipThrust.repsLabel, "10");
+  assert.equal(restCategoryFor(hipThrust), "compound");
 
   const legCurl = accessoryDefFor(4, "Machine leg curl");
   assert.equal(legCurl.sets, 3);
@@ -227,9 +236,9 @@ test("the four rotation days (1-4) are Bench/Squat/Press/Deadlift", () => {
   assert.deepEqual([1, 2, 3, 4].map((i) => dayInfo(i).name), ["Bench", "Squat", "Press", "Deadlift"]);
 });
 
-test("Every main lift day has its own distinct BBB alternate movement", () => {
+test("Bench, Squat, and Press each have their own distinct BBB alternate movement; Deadlift has none (no BBB at all)", () => {
   assert.deepEqual(dayInfo(1).supplementalAlt, { type: "dbFlatPress", label: "DB flat press", sets: 5, targetReps: 10 });
   assert.deepEqual(dayInfo(2).supplementalAlt, { type: "beltSquat", label: "Belt squat", sets: 5, targetReps: 10 });
   assert.deepEqual(dayInfo(3).supplementalAlt, { type: "seatedDbPress", label: "Seated DB press", sets: 5, targetReps: 10 });
-  assert.deepEqual(dayInfo(4).supplementalAlt, { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true });
+  assert.equal(dayInfo(4).supplementalAlt, undefined);
 });

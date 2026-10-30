@@ -182,7 +182,10 @@ function remapDayIndexForAccessoryBonusLivePointer(dayIndex) {
 // it) untouched. Not flagged/versioned like the migrations above — it's
 // naturally idempotent (skipped once the exercise is already present), so it
 // simply runs on every load until the exercise is there.
-const CURRENT_SESSION_ACCESSORY_BACKFILLS = [{ dayIndex: 2, exerciseName: "Leg extension", sets: 4 }];
+const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
+  { dayIndex: 2, exerciseName: "Leg extension", sets: 4 },
+  { dayIndex: 4, exerciseName: "Hip thrust", sets: 3 },
+];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
   if (!currentSession) return currentSession;

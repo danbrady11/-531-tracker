@@ -68,12 +68,12 @@ export const DAYS = {
     name: "Deadlift",
     kind: "main",
     lift: "deadlift",
-    supplemental: "bbb",
-    // Selectable per-session instead of the default barbell BBB — same
-    // percentage-of-TM math (see calc.js's bbbSets). Barbell-loaded (across
-    // the hips), so it still gets a plate breakdown like standard BBB.
-    supplementalAlt: { type: "hipThrust", label: "Hip thrust", sets: 5, targetReps: 10, barbell: true },
+    // No BBB (or any percentage-of-TM supplemental) on Deadlift day — Hip
+    // thrust, formerly BBB's barbell-loaded alt here, is now its own plain
+    // accessory below instead, logged with its own weight/reps per set.
+    supplemental: null,
     accessories: [
+      { name: "Hip thrust", sets: 3, repsLabel: "10", restCategory: "compound" },
       { name: "Bulgarian split squat", sets: 3, repsLabel: "10/leg", restCategory: "compound" },
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
       { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },

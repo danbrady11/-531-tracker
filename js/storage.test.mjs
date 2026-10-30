@@ -724,3 +724,62 @@ test("migrate leaves completed history at the old bonus-Accessory slot untouched
   assert.equal(migrated.sessionLogs[0].dayIndex, OLD_BONUS_ACCESSORY_DAY_INDEX);
   assert.equal(migrated.sessionLogs[0].completed, true);
 });
+
+// Taking BBB out of Deadlift day and adding Hip thrust as a plain accessory
+// is a config addition like Leg extension's above — patches an in-progress
+// Deadlift session in place instead of discarding it.
+test("migrate backfills Hip thrust onto an in-progress Deadlift-day session, leaving everything else untouched", () => {
+  const state = {
+    ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([{ exerciseName: "Bulgarian split squat", setIndex: 0, weight: 50, reps: 10, completed: true }]),
+      dayIndex: 4,
+      mainSets: [{ percentage: 0.65, weight: 100, targetReps: 5, actualReps: 5, isAmrap: false, completed: true }],
+    },
+  };
+  const migrated = migrate(state);
+  const session = migrated.currentSession;
+
+  assert.equal(session.dayIndex, 4);
+  assert.deepEqual(session.mainSets, state.currentSession.mainSets);
+  const splitSquat = session.accessorySets.filter((s) => s.exerciseName === "Bulgarian split squat");
+  assert.deepEqual(splitSquat, [{ exerciseName: "Bulgarian split squat", setIndex: 0, weight: 50, reps: 10, completed: true }]);
+
+  const hipThrust = session.accessorySets.filter((s) => s.exerciseName === "Hip thrust");
+  assert.equal(hipThrust.length, 3);
+  hipThrust.forEach((s, i) => {
+    assert.equal(s.setIndex, i);
+    assert.equal(s.weight, null);
+    assert.equal(s.reps, null);
+    assert.equal(s.completed, false);
+  });
+
+  assert.equal(session.accessorySets[0].exerciseName, "Bulgarian split squat");
+  assert.equal(session.accessorySets[session.accessorySets.length - 1].exerciseName, "Hip thrust");
+});
+
+test("migrate's Hip thrust backfill prefills from existing history, same as any other accessory", () => {
+  const state = {
+    ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+    sessionLogs: [{ ...sessionWith([{ exerciseName: "Hip thrust", setIndex: 0, weight: 185, reps: 10, completed: true }]), dayIndex: 4, completed: true }],
+    currentSession: { ...sessionWith([]), dayIndex: 4 },
+  };
+  const migrated = migrate(state);
+  const firstSet = migrated.currentSession.accessorySets.find((s) => s.exerciseName === "Hip thrust" && s.setIndex === 0);
+  assert.equal(firstSet.weight, 185);
+  assert.equal(firstSet.reps, 10);
+});
+
+test("migrate's Hip thrust backfill is idempotent — doesn't duplicate on a second migrate() call", () => {
+  const state = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 4 } };
+  const once = migrate(state);
+  const twice = migrate(once);
+  assert.equal(twice.currentSession.accessorySets.filter((s) => s.exerciseName === "Hip thrust").length, 3);
+});
+
+test("migrate's Hip thrust backfill does nothing for a non-Deadlift-day in-progress session", () => {
+  const state = { ...ALL_FIVE_DAY_MIGRATION_FLAGS, sessionLogs: [], currentSession: { ...sessionWith([]), dayIndex: 1 } };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.accessorySets.some((s) => s.exerciseName === "Hip thrust"), false);
+});
