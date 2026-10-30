@@ -1,4 +1,6 @@
-// Static description of the 5-day rolling cycle. Day numbers are 1-5.
+// Static description of the 4-day rolling cycle. Day numbers are 1-4. The
+// Accessory day (see BONUS_DAYS below) isn't part of the rotation — it's an
+// optional bonus session started on demand from the Today screen.
 
 // Rest-timer bucket for a set-based accessory. Anything not explicitly
 // tagged "compound" below defaults to "isolation" — see restCategoryFor().
@@ -64,22 +66,6 @@ export const DAYS = {
     ],
   },
   4: {
-    name: "Accessory",
-    kind: "accessory",
-    lift: null,
-    supplemental: null,
-    accessories: [
-      { name: "Leg press", sets: 4, repsLabel: "10–12", restCategory: "compound", cue: "Belt squat if no leg press." },
-      { name: "Seated leg curl", sets: 4, repsLabel: "10–12" },
-      { name: "Standing calf raise", sets: 4, repsLabel: "15" },
-      { name: "Pec deck", sets: 3, repsLabel: "12–15" },
-      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
-      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
-      { name: "Hammer curls", sets: 4, repsLabel: "10–12" },
-      { name: "Cable crunch", sets: 3, repsLabel: "12" },
-    ],
-  },
-  5: {
     name: "Deadlift",
     kind: "main",
     lift: "deadlift",
@@ -93,6 +79,37 @@ export const DAYS = {
       { name: "Seated cable row (close grip)", sets: 3, repsLabel: "10–12", restCategory: "compound", cue: "Use straps. Keep torso still, no rocking." },
       { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
       { name: "Calf raise", sets: 5, repsLabel: "15", variants: ["Seated calf raise", "Standing calf raise"] },
+      { name: "Cable crunch", sets: 3, repsLabel: "12" },
+    ],
+  },
+};
+
+// The dedicated index for the Accessory day now that it's no longer part of
+// the rotation — not 1-DAY_COUNT (those are the four rotation days) and not
+// a LEGACY_DAYS slot either (it's still actively started, just on demand
+// rather than in sequence). 8 picks up after the two reserved legacy slots
+// below (6, 7).
+export const BONUS_ACCESSORY_DAY_INDEX = 8;
+
+// Days reachable on demand (the "Bonus: Accessory day" button on Today) but
+// never part of the normal DAY_COUNT rotation — so completing or skipping
+// one never advances the cycle, the week, or training maxes (see finishDay
+// in app.js). Exercise list and history are exactly what the Accessory day
+// had when it was still a rotation day.
+const BONUS_DAYS = {
+  [BONUS_ACCESSORY_DAY_INDEX]: {
+    name: "Accessory",
+    kind: "accessory",
+    lift: null,
+    supplemental: null,
+    accessories: [
+      { name: "Leg press", sets: 4, repsLabel: "10–12", restCategory: "compound", cue: "Belt squat if no leg press." },
+      { name: "Seated leg curl", sets: 4, repsLabel: "10–12" },
+      { name: "Standing calf raise", sets: 4, repsLabel: "15" },
+      { name: "Pec deck", sets: 3, repsLabel: "12–15" },
+      { name: "Lateral raise", sets: 4, repsLabel: "15", supersetRole: "a" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15", supersetRole: "b" },
+      { name: "Hammer curls", sets: 4, repsLabel: "10–12" },
       { name: "Cable crunch", sets: 3, repsLabel: "12" },
     ],
   },
@@ -136,11 +153,11 @@ const LEGACY_DAYS = {
   },
 };
 
-export const DAY_COUNT = 5;
+export const DAY_COUNT = 4;
 export const WEEK_COUNT = 4;
 
 export function dayInfo(dayIndex) {
-  return DAYS[dayIndex] || LEGACY_DAYS[dayIndex];
+  return DAYS[dayIndex] || BONUS_DAYS[dayIndex] || LEGACY_DAYS[dayIndex];
 }
 
 /**

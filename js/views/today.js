@@ -1,4 +1,4 @@
-import { dayInfo, DAY_COUNT, restCategoryFor } from "../program.js";
+import { dayInfo, DAY_COUNT, restCategoryFor, BONUS_ACCESSORY_DAY_INDEX } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
 import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle, amrapHistory } from "../state.js";
 import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
@@ -314,6 +314,8 @@ function renderSplashScreen(root, ctx) {
     ${liftStatusHtml(state.sessionLogs, state.settings, state.cycleState)}
     <div class="section-label">Or pick a different day</div>
     <div class="card splash-other-days">${otherDaysHtml}</div>
+    <button class="btn btn-block" style="margin-top:14px;" data-action="start-bonus-accessory">Bonus: Accessory day</button>
+    <div class="set-meta" style="text-align:center;margin-top:6px;">Optional — logs to history but doesn't advance the cycle, week, or training maxes.</div>
   `;
 
   root.querySelectorAll('[data-action="start-day"]').forEach((el) =>
@@ -329,6 +331,11 @@ function renderSplashScreen(root, ctx) {
     })
   );
   root.querySelector('[data-action="toggle-deload"]')?.addEventListener("change", () => ctx.actions.toggleDeloadOverride());
+  root.querySelector('[data-action="start-bonus-accessory"]')?.addEventListener("click", () => {
+    ctx.actions.startBonusAccessoryDay();
+    todayScreen = "workout";
+    renderToday(root, ctx);
+  });
 }
 
 function renderWorkoutScreen(root, ctx) {
@@ -344,8 +351,12 @@ function renderWorkoutScreen(root, ctx) {
   const weekCount = effectiveWeekCount(cycleNumber, state.settings, state.cycleState.deloadOverride);
   const restTimerSec = state.settings.restTimerSec;
 
+  const isBonusDay = dayIndex === BONUS_ACCESSORY_DAY_INDEX;
+
   let html = `<button class="btn btn-sm btn-ghost" data-action="back-to-splash" style="margin-bottom:8px;">‹ Overview</button>`;
-  html += `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of ${DAY_COUNT}</div>`;
+  html += isBonusDay
+    ? `<div class="day-kicker">Bonus session · doesn't advance the cycle</div>`
+    : `<div class="day-kicker">Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount} · Day ${dayIndex} of ${DAY_COUNT}</div>`;
   html += `<h2 style="margin:0 0 12px;font-size:1.6rem;">${escapeHtml(day.name)}</h2>`;
 
   if (isMainDay) {

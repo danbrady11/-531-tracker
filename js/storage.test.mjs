@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { migrate } from "./storage.js";
+import { BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
 
 function sessionWith(accessorySets) {
   return { id: "1", date: "2026-01-01T00:00:00.000Z", dayIndex: 2, weekIndex: 1, lift: "bench", completed: true, mainSets: [], supplementalSets: [], accessorySets, notes: "" };
@@ -153,6 +154,7 @@ test("migrate renames an in-progress currentSession's accessorySets too", () => 
   const state = {
     _dayCount4MigrationV1: true, // isolate from the day-count-4 migration, which drops currentSession entirely
     _dayCount5ReintroduceV1: true, // isolate from the day-count-5 reintroduce migration, which also drops it
+    _accessoryBonusMigrationV1: true, // isolate from the new bonus-day migration, which also drops it
     sessionLogs: [],
     currentSession: { ...sessionWith([{ exerciseName: "Rear delt", setIndex: 0, weight: 20, reps: 15, completed: false }]), completed: false },
   };
@@ -170,6 +172,7 @@ test("migrate rotates old dayIndex values to match the reordered program (Deadli
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // was Deadlift
       { ...sessionWith([]), dayIndex: 6 }, // was Accessory
@@ -187,6 +190,7 @@ test("migrate's day-order rotation runs exactly once (flagged), not repeatedly o
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 6);
@@ -202,6 +206,7 @@ test("migrate rotates an in-progress currentSession's dayIndex too", () => {
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 5 }, // was Press
   };
@@ -218,6 +223,7 @@ test("migrate remaps completed history onto the 5-day cycle, sending old Recover
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // was Recovery
@@ -237,6 +243,7 @@ test("migrate advances cycleState past the removed Recovery day to Squat's new s
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3 },
   };
@@ -249,6 +256,7 @@ test("migrate shifts a non-Recovery cycleState dayIndex down past the removed sl
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 6, weekIndex: 1, cycleNumber: 1 }, // was Deadlift
   };
@@ -261,6 +269,7 @@ test("migrate discards an in-progress Recovery currentSession (nothing to contin
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 2 },
   };
@@ -273,6 +282,7 @@ test("migrate shifts a non-Recovery in-progress currentSession's dayIndex down p
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 4 }, // was Press
   };
@@ -285,6 +295,7 @@ test("migrate's day-count-5 restructure runs exactly once, not repeatedly on rel
     _dayOrderRotatedV1: true,
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 3 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 2);
@@ -303,6 +314,7 @@ test("migrate remaps completed history onto the 4-day cycle, sending old Accesso
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -321,6 +333,7 @@ test("migrate advances cycleState past the removed Accessory day to Deadlift's n
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 4, weekIndex: 2, cycleNumber: 3 },
   };
@@ -333,6 +346,7 @@ test("migrate shifts a non-Accessory cycleState dayIndex (old Deadlift, day 5) d
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 5, weekIndex: 1, cycleNumber: 1 },
   };
@@ -346,6 +360,7 @@ test("migrate leaves a cycleState dayIndex of 1-3 untouched (Bench/Squat/Press k
       _dayOrderRotatedV1: true,
       _dayCount5MigrationV1: true,
       _dayCount5ReintroduceV1: true,
+      _accessoryBonusMigrationV1: true,
       sessionLogs: [],
       cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 },
     });
@@ -359,6 +374,7 @@ test("migrate discards ANY in-progress currentSession during the day-count-4 res
       _dayOrderRotatedV1: true,
       _dayCount5MigrationV1: true,
       _dayCount5ReintroduceV1: true,
+      _accessoryBonusMigrationV1: true,
       sessionLogs: [],
       currentSession: { ...sessionWith([]), dayIndex },
     };
@@ -372,6 +388,7 @@ test("migrate's day-count-4 restructure runs exactly once, not repeatedly on rel
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount5ReintroduceV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 5 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 4);
@@ -390,6 +407,7 @@ test("migrate remaps completed history onto the reintroduced 5-day cycle, shifti
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -407,6 +425,7 @@ test("migrate advances cycleState from old Deadlift (day 4) to its new slot (day
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 4, weekIndex: 2, cycleNumber: 3 },
   };
@@ -420,6 +439,7 @@ test("migrate leaves a cycleState dayIndex of 1-3 untouched during the reintrodu
       _dayOrderRotatedV1: true,
       _dayCount5MigrationV1: true,
       _dayCount4MigrationV1: true,
+      _accessoryBonusMigrationV1: true,
       sessionLogs: [],
       cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 },
     });
@@ -433,6 +453,7 @@ test("migrate discards ANY in-progress currentSession during the reintroduce res
       _dayOrderRotatedV1: true,
       _dayCount5MigrationV1: true,
       _dayCount4MigrationV1: true,
+      _accessoryBonusMigrationV1: true,
       sessionLogs: [],
       currentSession: { ...sessionWith([]), dayIndex },
     };
@@ -446,6 +467,7 @@ test("migrate's day-count-5-reintroduce restructure runs exactly once, not repea
     _dayOrderRotatedV1: true,
     _dayCount5MigrationV1: true,
     _dayCount4MigrationV1: true,
+    _accessoryBonusMigrationV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 5);
@@ -465,6 +487,7 @@ const ALL_DAY_MIGRATION_FLAGS = {
   _dayCount5MigrationV1: true,
   _dayCount4MigrationV1: true,
   _dayCount5ReintroduceV1: true,
+  _accessoryBonusMigrationV1: true,
 };
 
 test("migrate backfills Leg extension onto an in-progress Squat-day session, leaving everything else untouched", () => {
@@ -529,4 +552,123 @@ test("migrate's Leg extension backfill does nothing for a non-Squat-day in-progr
 test("migrate's Leg extension backfill does nothing when there's no in-progress session at all", () => {
   const migrated = migrate({ ...ALL_DAY_MIGRATION_FLAGS, sessionLogs: [] });
   assert.equal(migrated.currentSession, undefined);
+});
+
+// The accessory-bonus migration (Accessory day pulled out of the rotation
+// and turned into an optional bonus session) runs after all four earlier
+// migrations (real users already have those flags set), so these pre-flag
+// them as done and test only this restructure.
+test("migrate remaps completed history onto the bonus-day restructure, sending old Accessory (day 4) to the bonus slot and old Deadlift (day 5) to day 4", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [
+      { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
+      { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
+      { ...sessionWith([]), dayIndex: 3 }, // Press, unchanged
+      { ...sessionWith([]), dayIndex: 4 }, // was Accessory (rotation day)
+      { ...sessionWith([]), dayIndex: 5 }, // was Deadlift
+    ],
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [1, 2, 3, BONUS_ACCESSORY_DAY_INDEX, 4]);
+  assert.equal(migrated._accessoryBonusMigrationV1, true);
+});
+
+test("migrate advances cycleState past the removed Accessory rotation slot to Deadlift's new slot, same week/cycle", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [],
+    cycleState: { dayIndex: 4, weekIndex: 2, cycleNumber: 3 },
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.cycleState, { dayIndex: 4, weekIndex: 2, cycleNumber: 3, deloadOverride: null });
+});
+
+test("migrate shifts a non-Accessory cycleState dayIndex (old Deadlift, day 5) down to the new day 4", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [],
+    cycleState: { dayIndex: 5, weekIndex: 1, cycleNumber: 1 },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.cycleState.dayIndex, 4);
+});
+
+test("migrate leaves a cycleState dayIndex of 1-3 untouched during the bonus-day restructure", () => {
+  for (const dayIndex of [1, 2, 3]) {
+    const migrated = migrate({
+      _dayOrderRotatedV1: true,
+      _dayCount5MigrationV1: true,
+      _dayCount4MigrationV1: true,
+      _dayCount5ReintroduceV1: true,
+      sessionLogs: [],
+      cycleState: { dayIndex, weekIndex: 1, cycleNumber: 1 },
+    });
+    assert.equal(migrated.cycleState.dayIndex, dayIndex);
+  }
+});
+
+test("migrate discards an in-progress Accessory-day (old day 4) currentSession — no clean bonus-session continuation", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [],
+    currentSession: { ...sessionWith([]), dayIndex: 4 },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession, null);
+});
+
+test("migrate shifts a non-Accessory in-progress currentSession's dayIndex (old Deadlift, day 5) down to the new day 4", () => {
+  const state = {
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [],
+    currentSession: { ...sessionWith([]), dayIndex: 5 },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.dayIndex, 4);
+});
+
+test("migrate leaves a currentSession on days 1-3 untouched (just flags the migration done)", () => {
+  for (const dayIndex of [1, 2, 3]) {
+    const state = {
+      _dayOrderRotatedV1: true,
+      _dayCount5MigrationV1: true,
+      _dayCount4MigrationV1: true,
+      _dayCount5ReintroduceV1: true,
+      sessionLogs: [],
+      currentSession: { ...sessionWith([]), dayIndex },
+    };
+    const migrated = migrate(state);
+    assert.equal(migrated.currentSession.dayIndex, dayIndex);
+  }
+});
+
+test("migrate's bonus-day restructure runs exactly once, not repeatedly on reload", () => {
+  const once = migrate({
+    _dayOrderRotatedV1: true,
+    _dayCount5MigrationV1: true,
+    _dayCount4MigrationV1: true,
+    _dayCount5ReintroduceV1: true,
+    sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
+  });
+  assert.equal(once.sessionLogs[0].dayIndex, BONUS_ACCESSORY_DAY_INDEX);
+  assert.equal(once._accessoryBonusMigrationV1, true);
+
+  const twice = migrate(once);
+  assert.equal(twice.sessionLogs[0].dayIndex, BONUS_ACCESSORY_DAY_INDEX, "must not shift a second time");
 });

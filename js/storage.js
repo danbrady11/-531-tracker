@@ -1,5 +1,6 @@
 import { LIFTS } from "./calc.js";
 import { lastAccessoryLog } from "./state.js";
+import { BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
 
 const STORAGE_KEY = "531-tracker-state-v1";
 
@@ -142,6 +143,29 @@ function remapDayIndexForDayCount5Reintroduce(dayIndex) {
   return DAY_COUNT_5_REINTRODUCE_REMAP[dayIndex] ?? dayIndex;
 }
 
+// One-time program restructure: the Accessory day (day 4) is pulled out of
+// the rotation and turned into an optional bonus session, started on demand
+// rather than in sequence — shrinking the rotation from 5 days back to 4.
+// Its exercise list is NOT redistributed anywhere this time (unlike the
+// earlier 5-day -> 4-day collapse) — it's preserved whole, just moved to the
+// reserved BONUS_ACCESSORY_DAY_INDEX slot (see program.js) so it no longer
+// collides with whatever day 4 means in the rotation. Bench/Squat/Press keep
+// their day numbers; old day 5 (Deadlift) becomes day 4.
+const DAY_COUNT_4_BONUS_REMAP_HISTORY = { 1: 1, 2: 2, 3: 3, 4: BONUS_ACCESSORY_DAY_INDEX, 5: 4 };
+
+function remapDayIndexForAccessoryBonusHistory(dayIndex) {
+  return DAY_COUNT_4_BONUS_REMAP_HISTORY[dayIndex] ?? dayIndex;
+}
+
+// For the live cycle pointer, old day 4 (Accessory) has nowhere sensible to
+// stay in the rotation — it's no longer part of it — so it resolves forward
+// to whatever would run next (old day 5, Deadlift, now day 4) rather than to
+// the bonus slot (nothing should ever be "recommended next" into a bonus
+// day). Day 5 maps to the same new day 4 for the same reason.
+function remapDayIndexForAccessoryBonusLivePointer(dayIndex) {
+  return dayIndex <= 3 ? dayIndex : 4;
+}
+
 // Config additions to an existing day's accessory list (as opposed to the
 // structural restructures above) don't need a currentSession reset: unlike
 // those, nothing else about the day changes shape, so an in-progress session
@@ -259,6 +283,25 @@ export function migrate(state) {
       merged.currentSession = null;
     }
     merged._dayCount5ReintroduceV1 = true;
+  }
+
+  if (!state._accessoryBonusMigrationV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForAccessoryBonusHistory(log.dayIndex) }));
+    merged.cycleState = { ...merged.cycleState, dayIndex: remapDayIndexForAccessoryBonusLivePointer(merged.cycleState.dayIndex) };
+    // An in-progress Accessory-day session has no clean continuation as a
+    // bonus session — bonus completion deliberately skips cycle/TM
+    // advancement entirely, which an already-half-logged rotation session
+    // was never built expecting — so it's dropped rather than reinterpreted.
+    // A non-Accessory session just shifts its dayIndex like history does.
+    // No completed history is affected either way.
+    if (merged.currentSession) {
+      if (merged.currentSession.dayIndex === 4) {
+        merged.currentSession = null;
+      } else {
+        merged.currentSession = { ...merged.currentSession, dayIndex: remapDayIndexForAccessoryBonusLivePointer(merged.currentSession.dayIndex) };
+      }
+    }
+    merged._accessoryBonusMigrationV1 = true;
   }
 
   merged.currentSession = backfillCurrentSessionAccessories(merged.currentSession, merged.sessionLogs);
