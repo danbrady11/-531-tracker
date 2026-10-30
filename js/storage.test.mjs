@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { migrate } from "./storage.js";
-import { BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
+
+// The old bonus-Accessory-day slot (no longer exported from program.js now
+// that the feature is removed — it's purely a history-only legacy slot,
+// see program.js's LEGACY_DAYS[8]), used by the still-shipped
+// _accessoryBonusMigrationV1 migration's own tests below.
+const OLD_BONUS_ACCESSORY_DAY_INDEX = 8;
 
 function sessionWith(accessorySets) {
   return { id: "1", date: "2026-01-01T00:00:00.000Z", dayIndex: 2, weekIndex: 1, lift: "bench", completed: true, mainSets: [], supplementalSets: [], accessorySets, notes: "" };
@@ -573,7 +578,7 @@ test("migrate remaps completed history onto the bonus-day restructure, sending o
     ],
   };
   const migrated = migrate(state);
-  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [1, 2, 3, BONUS_ACCESSORY_DAY_INDEX, 4]);
+  assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [1, 2, 3, OLD_BONUS_ACCESSORY_DAY_INDEX, 4]);
   assert.equal(migrated._accessoryBonusMigrationV1, true);
 });
 
@@ -666,9 +671,56 @@ test("migrate's bonus-day restructure runs exactly once, not repeatedly on reloa
     _dayCount5ReintroduceV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
   });
-  assert.equal(once.sessionLogs[0].dayIndex, BONUS_ACCESSORY_DAY_INDEX);
+  assert.equal(once.sessionLogs[0].dayIndex, OLD_BONUS_ACCESSORY_DAY_INDEX);
   assert.equal(once._accessoryBonusMigrationV1, true);
 
   const twice = migrate(once);
-  assert.equal(twice.sessionLogs[0].dayIndex, BONUS_ACCESSORY_DAY_INDEX, "must not shift a second time");
+  assert.equal(twice.sessionLogs[0].dayIndex, OLD_BONUS_ACCESSORY_DAY_INDEX, "must not shift a second time");
+});
+
+// The bonus Accessory session itself is removed entirely as of this change.
+// A stray in-progress session at the old bonus slot (from right before this
+// update shipped) has nothing to continue as, so it's discarded — naturally
+// idempotent, no version flag. All five structural-migration flags are
+// pre-flagged so only this discard runs.
+const ALL_FIVE_DAY_MIGRATION_FLAGS = {
+  _dayOrderRotatedV1: true,
+  _dayCount5MigrationV1: true,
+  _dayCount4MigrationV1: true,
+  _dayCount5ReintroduceV1: true,
+  _accessoryBonusMigrationV1: true,
+};
+
+test("migrate discards a stray in-progress session left at the old bonus-Accessory slot", () => {
+  const state = {
+    ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+    sessionLogs: [],
+    currentSession: { ...sessionWith([]), dayIndex: OLD_BONUS_ACCESSORY_DAY_INDEX },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession, null);
+});
+
+test("migrate leaves a currentSession on a rotation day (1-4) alone when discarding the stray bonus session", () => {
+  for (const dayIndex of [1, 2, 3, 4]) {
+    const state = {
+      ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+      sessionLogs: [],
+      currentSession: { ...sessionWith([]), dayIndex },
+    };
+    const migrated = migrate(state);
+    assert.equal(migrated.currentSession.dayIndex, dayIndex);
+  }
+});
+
+test("migrate leaves completed history at the old bonus-Accessory slot untouched — only the in-progress session is dropped", () => {
+  const state = {
+    ...ALL_FIVE_DAY_MIGRATION_FLAGS,
+    sessionLogs: [{ ...sessionWith([]), dayIndex: OLD_BONUS_ACCESSORY_DAY_INDEX, completed: true }],
+    currentSession: { ...sessionWith([]), dayIndex: OLD_BONUS_ACCESSORY_DAY_INDEX },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession, null);
+  assert.equal(migrated.sessionLogs[0].dayIndex, OLD_BONUS_ACCESSORY_DAY_INDEX);
+  assert.equal(migrated.sessionLogs[0].completed, true);
 });

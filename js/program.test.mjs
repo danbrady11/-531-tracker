@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { accessoryDefFor, restCategoryFor, dayInfo, DAY_COUNT, BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
+import { accessoryDefFor, restCategoryFor, dayInfo, DAY_COUNT } from "./program.js";
 
 test("the program is a 4-day rotation", () => {
   assert.equal(DAY_COUNT, 4);
@@ -25,8 +25,8 @@ test("restCategoryFor defaults to isolation when untagged or missing", () => {
   assert.equal(restCategoryFor(null), "isolation");
 });
 
-test("Lateral raise / Reverse pec deck are a superset pair on Squat, Bench, and the bonus Accessory day; Press and Deadlift don't have it", () => {
-  for (const dayIndex of [1, 2, BONUS_ACCESSORY_DAY_INDEX]) {
+test("Lateral raise / Reverse pec deck are a superset pair on Squat and Bench; Press and Deadlift don't have it", () => {
+  for (const dayIndex of [1, 2]) {
     const lateral = accessoryDefFor(dayIndex, "Lateral raise");
     const reverseFly = accessoryDefFor(dayIndex, "Reverse pec deck / cable reverse fly");
     assert.equal(lateral?.supersetRole, "a", `day ${dayIndex} Lateral raise`);
@@ -38,13 +38,11 @@ test("Lateral raise / Reverse pec deck are a superset pair on Squat, Bench, and 
   }
 });
 
-test("Lateral raise / Reverse pec deck set counts: 4x15/4x15 on Squat, 4x15/3x15 on Bench and the bonus Accessory day", () => {
-  assert.equal(accessoryDefFor(2, "Lateral raise").sets, 4, "Squat");
+test("Lateral raise is 5x15 on both Squat and Bench; Reverse pec deck stays 4x15 on Squat and 3x15 on Bench", () => {
+  assert.equal(accessoryDefFor(1, "Lateral raise").sets, 5, "Bench");
+  assert.equal(accessoryDefFor(1, "Reverse pec deck / cable reverse fly").sets, 3, "Bench");
+  assert.equal(accessoryDefFor(2, "Lateral raise").sets, 5, "Squat");
   assert.equal(accessoryDefFor(2, "Reverse pec deck / cable reverse fly").sets, 4, "Squat");
-  for (const dayIndex of [1, BONUS_ACCESSORY_DAY_INDEX]) {
-    assert.equal(accessoryDefFor(dayIndex, "Lateral raise").sets, 4, `day ${dayIndex}`);
-    assert.equal(accessoryDefFor(dayIndex, "Reverse pec deck / cable reverse fly").sets, 3, `day ${dayIndex}`);
-  }
 });
 
 test("accessoryDefFor matches either calf raise variant name, on both days that offer it", () => {
@@ -63,7 +61,7 @@ test("calf raise defaults to Standing on Squat day and Seated on Deadlift day", 
   assert.equal(accessoryDefFor(4, "Seated calf raise").variants[0], "Seated calf raise");
 });
 
-test("Swiss ball leg curl is gone entirely; Machine leg curl is now its own standalone exercise on Squat day", () => {
+test("Swiss ball leg curl is gone entirely; Machine leg curl on Squat day is its own standalone exercise", () => {
   const machine = accessoryDefFor(2, "Machine leg curl");
   assert.equal(machine?.name, "Machine leg curl");
   assert.equal(machine.sets, 3);
@@ -79,7 +77,7 @@ test("dayInfo returns a legacy Recovery definition for the reserved day 6 slot, 
   assert.equal(legacy?.kind, "recovery");
 });
 
-test("dayInfo returns a legacy Accessory definition for the reserved day 7 slot, for old history only (distinct from the live bonus Accessory day)", () => {
+test("dayInfo returns a legacy Accessory definition for the reserved day 7 slot (from the 5-day -> 4-day collapse), for old history only", () => {
   const legacy = dayInfo(7);
   assert.equal(legacy?.name, "Accessory");
   assert.equal(legacy?.kind, "accessory");
@@ -95,7 +93,31 @@ test("dayInfo returns a legacy Accessory definition for the reserved day 7 slot,
   ]);
 });
 
-test("Bench day (1): Curls 4x12, Reverse pec deck 3x15, everything else unchanged", () => {
+test("dayInfo returns a legacy Accessory definition for the reserved day 8 slot (from the removed bonus day), for old history only", () => {
+  const legacy = dayInfo(8);
+  assert.equal(legacy?.name, "Accessory");
+  assert.equal(legacy?.kind, "accessory");
+  const names = legacy.accessories.map((a) => a.name);
+  assert.deepEqual(names, [
+    "Leg press",
+    "Seated leg curl",
+    "Standing calf raise",
+    "Pec deck",
+    "Lateral raise",
+    "Reverse pec deck / cable reverse fly",
+    "Hammer curls",
+    "Cable crunch",
+  ]);
+});
+
+test("there is no live, selectable Accessory day anywhere in 1-DAY_COUNT, and dayInfo returns nothing beyond the legacy slots", () => {
+  for (const dayIndex of [1, 2, 3, 4]) {
+    assert.notEqual(dayInfo(dayIndex).kind, "accessory", `day ${dayIndex}`);
+  }
+  assert.equal(dayInfo(9), undefined, "no day beyond the reserved legacy slots exists");
+});
+
+test("Bench day (1): Lateral raise now 5x15, Curls 4x12, everything else unchanged", () => {
   const names = dayInfo(1).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Pull-ups (weighted)",
@@ -114,7 +136,7 @@ test("Bench day (1): Curls 4x12, Reverse pec deck 3x15, everything else unchange
   assert.equal(incline.repsLabel, "8–10");
   assert.equal(restCategoryFor(incline), "compound");
   const lateral = accessoryDefFor(1, "Lateral raise");
-  assert.equal(lateral.sets, 4);
+  assert.equal(lateral.sets, 5, "was 4x15, now 5x15");
   assert.equal(lateral.repsLabel, "15");
   assert.equal(lateral.supersetRole, "a");
   const reverseFly = accessoryDefFor(1, "Reverse pec deck / cable reverse fly");
@@ -123,17 +145,26 @@ test("Bench day (1): Curls 4x12, Reverse pec deck 3x15, everything else unchange
   assert.equal(reverseFly.supersetRole, "b");
 });
 
-test("Squat day (2): Leg extension between Machine leg curl and Calf raise", () => {
+test("Squat day (2): Lateral raise now 5x15; Machine leg curl and Leg extension both present, in order, after RDL", () => {
   const names = dayInfo(2).accessories.map((a) => a.name);
   assert.deepEqual(names, ["RDL", "Machine leg curl", "Leg extension", "Calf raise", "Lateral raise", "Reverse pec deck / cable reverse fly", "Cable crunch"]);
+
+  const legCurl = accessoryDefFor(2, "Machine leg curl");
+  assert.equal(legCurl.sets, 3);
+  assert.equal(legCurl.repsLabel, "10–12");
+  assert.equal(restCategoryFor(legCurl), "compound");
+
   const legExtension = accessoryDefFor(2, "Leg extension");
   assert.equal(legExtension.sets, 4);
   assert.equal(legExtension.repsLabel, "12–15");
   assert.equal(restCategoryFor(legExtension), "isolation");
   assert.equal(legExtension.cue, "Pause at the top, lower slowly.");
+
+  const lateral = accessoryDefFor(2, "Lateral raise");
+  assert.equal(lateral.sets, 5, "was 4x15, now 5x15");
 });
 
-test("Press day (3): Cable rope overhead extension and Hammer curls removed; Rope pushdown added at the end", () => {
+test("Press day (3): Hammer curls added at the end, after Rope pushdown", () => {
   const names = dayInfo(3).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Chin-ups",
@@ -141,13 +172,16 @@ test("Press day (3): Cable rope overhead extension and Hammer curls removed; Rop
     "Straight-arm pulldown",
     "Hex press",
     "Rope pushdown",
+    "Hammer curls",
   ]);
-  assert.equal(accessoryDefFor(3, "Cable rope overhead extension"), null, "removed");
-  assert.equal(accessoryDefFor(3, "Hammer curls"), null, "removed");
   const ropePushdown = accessoryDefFor(3, "Rope pushdown");
   assert.equal(ropePushdown.sets, 3);
   assert.equal(ropePushdown.repsLabel, "12");
   assert.equal(restCategoryFor(ropePushdown), "isolation");
+  const hammerCurls = accessoryDefFor(3, "Hammer curls");
+  assert.equal(hammerCurls.sets, 3);
+  assert.equal(hammerCurls.repsLabel, "12");
+  assert.equal(restCategoryFor(hammerCurls), "isolation");
   const seatedRow = accessoryDefFor(3, "Seated cable row (wide/neutral)");
   assert.equal(seatedRow.sets, 5);
   assert.equal(seatedRow.repsLabel, "10");
@@ -156,15 +190,29 @@ test("Press day (3): Cable rope overhead extension and Hammer curls removed; Rop
   assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly"), null, "Press never has this superset");
 });
 
-test("Deadlift (now day 4): unchanged content, just renumbered back from day 5", () => {
+test("Deadlift day (4): Machine leg curl and Leg extension added right after Bulgarian split squat", () => {
   const names = dayInfo(4).accessories.map((a) => a.name);
   assert.deepEqual(names, [
     "Bulgarian split squat",
+    "Machine leg curl",
+    "Leg extension",
     "Seated cable row (close grip)",
     "Shrugs (straps)",
     "Calf raise",
     "Cable crunch",
   ]);
+
+  const legCurl = accessoryDefFor(4, "Machine leg curl");
+  assert.equal(legCurl.sets, 3);
+  assert.equal(legCurl.repsLabel, "10–12");
+  assert.equal(restCategoryFor(legCurl), "isolation");
+
+  const legExtension = accessoryDefFor(4, "Leg extension");
+  assert.equal(legExtension.sets, 3);
+  assert.equal(legExtension.repsLabel, "12–15");
+  assert.equal(restCategoryFor(legExtension), "isolation");
+  assert.equal(legExtension.cue, "Pause at the top, lower slowly.");
+
   const seatedRow = accessoryDefFor(4, "Seated cable row (close grip)");
   assert.equal(seatedRow.sets, 3);
   assert.equal(seatedRow.repsLabel, "10–12");
@@ -175,62 +223,8 @@ test("Deadlift (now day 4): unchanged content, just renumbered back from day 5",
   assert.equal(accessoryDefFor(4, "Reverse pec deck / cable reverse fly"), null);
 });
 
-test("the four rotation days (1-4) are Bench/Squat/Press/Deadlift; none is kind accessory", () => {
+test("the four rotation days (1-4) are Bench/Squat/Press/Deadlift", () => {
   assert.deepEqual([1, 2, 3, 4].map((i) => dayInfo(i).name), ["Bench", "Squat", "Press", "Deadlift"]);
-  for (const dayIndex of [1, 2, 3, 4]) {
-    assert.notEqual(dayInfo(dayIndex).kind, "accessory", `day ${dayIndex}`);
-  }
-});
-
-test("the bonus Accessory day lives outside DAY_COUNT, with no lift or supplemental, and the full exercise list in order (unchanged content)", () => {
-  assert.ok(BONUS_ACCESSORY_DAY_INDEX > DAY_COUNT, "bonus day index must not collide with a rotation day");
-  const day = dayInfo(BONUS_ACCESSORY_DAY_INDEX);
-  assert.equal(day.name, "Accessory");
-  assert.equal(day.kind, "accessory");
-  assert.equal(day.lift, null);
-  assert.equal(day.supplemental, null);
-  const names = day.accessories.map((a) => a.name);
-  assert.deepEqual(names, [
-    "Leg press",
-    "Seated leg curl",
-    "Standing calf raise",
-    "Pec deck",
-    "Lateral raise",
-    "Reverse pec deck / cable reverse fly",
-    "Hammer curls",
-    "Cable crunch",
-  ]);
-
-  const legPress = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Leg press");
-  assert.equal(legPress.sets, 4);
-  assert.equal(legPress.repsLabel, "10–12");
-  assert.equal(restCategoryFor(legPress), "compound");
-  assert.equal(legPress.cue, "Belt squat if no leg press.");
-
-  const legCurl = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Seated leg curl");
-  assert.equal(legCurl.sets, 4);
-  assert.equal(legCurl.repsLabel, "10–12");
-  assert.equal(restCategoryFor(legCurl), "isolation");
-
-  const calfRaise = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Standing calf raise");
-  assert.equal(calfRaise.sets, 4);
-  assert.equal(calfRaise.repsLabel, "15");
-  assert.equal(restCategoryFor(calfRaise), "isolation");
-
-  const pecDeck = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Pec deck");
-  assert.equal(pecDeck.sets, 3);
-  assert.equal(pecDeck.repsLabel, "12–15");
-  assert.equal(restCategoryFor(pecDeck), "isolation");
-
-  const hammerCurls = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Hammer curls");
-  assert.equal(hammerCurls.sets, 4);
-  assert.equal(hammerCurls.repsLabel, "10–12");
-  assert.equal(restCategoryFor(hammerCurls), "isolation");
-
-  const cableCrunch = accessoryDefFor(BONUS_ACCESSORY_DAY_INDEX, "Cable crunch");
-  assert.equal(cableCrunch.sets, 3);
-  assert.equal(cableCrunch.repsLabel, "12");
-  assert.equal(restCategoryFor(cableCrunch), "isolation");
 });
 
 test("Every main lift day has its own distinct BBB alternate movement", () => {

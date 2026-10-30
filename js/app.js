@@ -1,7 +1,7 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
 import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
-import { dayInfo, DAY_COUNT, accessoryDefFor, BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
+import { dayInfo, DAY_COUNT, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
@@ -552,14 +552,8 @@ function finishDay(completed) {
   const session = { ...state.currentSession, completed, date: new Date().toISOString() };
   state.sessionLogs.push(session);
 
-  // The bonus Accessory day is never part of the rotation (see
-  // BONUS_ACCESSORY_DAY_INDEX in program.js) — logging or skipping it is
-  // recorded just like any other session, but it must never move the
-  // recommended-next pointer, complete a cycle, or prompt a TM increase.
-  const isBonusDay = session.dayIndex === BONUS_ACCESSORY_DAY_INDEX;
-
   let cycleCompleted = false;
-  if (completed && !isBonusDay) {
+  if (completed) {
     // Advance from wherever this session actually was — which may differ
     // from state.cycleState if it was started via the day picker rather
     // than the recommended next day — so completing an out-of-order day
@@ -585,8 +579,6 @@ function finishDay(completed) {
 
   if (cycleCompleted) {
     promptCycleCompletion();
-  } else if (isBonusDay) {
-    showToast(completed ? "Bonus session logged" : "Bonus session skipped");
   } else {
     showToast(completed ? "Day logged" : "Day skipped");
   }
@@ -748,23 +740,6 @@ const actions = {
     }
     state.currentSession = buildSessionForPosition({
       dayIndex,
-      weekIndex: state.cycleState.weekIndex,
-      cycleNumber: state.cycleState.cycleNumber,
-    });
-    persist();
-    renderCurrentView();
-  },
-  // The optional bonus Accessory day — outside DAY_COUNT, so chooseDay()
-  // rejects it on purpose. Builds a session for it the same way chooseDay
-  // does for a rotation day, but finishDay() recognizes its dayIndex and
-  // never advances the cycle/week/TMs for it (see BONUS_ACCESSORY_DAY_INDEX).
-  startBonusAccessoryDay() {
-    if (state.currentSession?.dayIndex === BONUS_ACCESSORY_DAY_INDEX) {
-      renderCurrentView();
-      return;
-    }
-    state.currentSession = buildSessionForPosition({
-      dayIndex: BONUS_ACCESSORY_DAY_INDEX,
       weekIndex: state.cycleState.weekIndex,
       cycleNumber: state.cycleState.cycleNumber,
     });

@@ -1,6 +1,13 @@
 import { LIFTS } from "./calc.js";
 import { lastAccessoryLog } from "./state.js";
-import { BONUS_ACCESSORY_DAY_INDEX } from "./program.js";
+
+// The dedicated index the Accessory day used while it was an optional
+// "bonus" session (started on demand, outside the rotation) — now that the
+// bonus feature itself is removed, program.js no longer exports this: the
+// slot is purely historical (see program.js's LEGACY_DAYS[8]). Kept here
+// only so a stray in-progress bonus session from before this change can be
+// recognized and dropped below.
+const OLD_BONUS_ACCESSORY_DAY_INDEX = 8;
 
 const STORAGE_KEY = "531-tracker-state-v1";
 
@@ -148,10 +155,11 @@ function remapDayIndexForDayCount5Reintroduce(dayIndex) {
 // rather than in sequence — shrinking the rotation from 5 days back to 4.
 // Its exercise list is NOT redistributed anywhere this time (unlike the
 // earlier 5-day -> 4-day collapse) — it's preserved whole, just moved to the
-// reserved BONUS_ACCESSORY_DAY_INDEX slot (see program.js) so it no longer
-// collides with whatever day 4 means in the rotation. Bench/Squat/Press keep
-// their day numbers; old day 5 (Deadlift) becomes day 4.
-const DAY_COUNT_4_BONUS_REMAP_HISTORY = { 1: 1, 2: 2, 3: 3, 4: BONUS_ACCESSORY_DAY_INDEX, 5: 4 };
+// reserved OLD_BONUS_ACCESSORY_DAY_INDEX slot (see program.js's
+// LEGACY_DAYS[8]) so it no longer collides with whatever day 4 means in the
+// rotation. Bench/Squat/Press keep their day numbers; old day 5 (Deadlift)
+// becomes day 4.
+const DAY_COUNT_4_BONUS_REMAP_HISTORY = { 1: 1, 2: 2, 3: 3, 4: OLD_BONUS_ACCESSORY_DAY_INDEX, 5: 4 };
 
 function remapDayIndexForAccessoryBonusHistory(dayIndex) {
   return DAY_COUNT_4_BONUS_REMAP_HISTORY[dayIndex] ?? dayIndex;
@@ -302,6 +310,16 @@ export function migrate(state) {
       }
     }
     merged._accessoryBonusMigrationV1 = true;
+  }
+
+  // The optional "bonus" Accessory session is removed entirely as of this
+  // change — nothing builds a session at OLD_BONUS_ACCESSORY_DAY_INDEX
+  // anymore, so a stray one left in progress from before this update has
+  // nothing to continue as. Naturally idempotent (a no-op once there's no
+  // such session left), so no version flag needed. Completed history at
+  // that index is untouched — see program.js's LEGACY_DAYS[8].
+  if (merged.currentSession?.dayIndex === OLD_BONUS_ACCESSORY_DAY_INDEX) {
+    merged.currentSession = null;
   }
 
   merged.currentSession = backfillCurrentSessionAccessories(merged.currentSession, merged.sessionLogs);
