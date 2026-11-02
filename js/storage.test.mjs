@@ -21,6 +21,7 @@ const ALL_MIGRATIONS_DONE = {
   _dayCount5ReintroduceV1: true,
   _accessoryBonusMigrationV1: true,
   _pplRestructureV1: true,
+  _pplRestructureCycleFixV1: true,
 };
 
 test("migrate defaults deloadOnEvenCyclesOnly to true for a brand-new state", () => {
@@ -221,6 +222,7 @@ test("migrate rotates old dayIndex values to match the reordered program (Deadli
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // was Deadlift
       { ...sessionWith([]), dayIndex: 6 }, // was Accessory
@@ -240,6 +242,7 @@ test("migrate's day-order rotation runs exactly once (flagged), not repeatedly o
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 1 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 6);
@@ -256,6 +259,7 @@ test("migrate rotates an in-progress currentSession's dayIndex too", () => {
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 5 }, // was Press
   };
@@ -273,6 +277,7 @@ test("migrate remaps completed history onto the 5-day cycle, sending old Recover
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // was Recovery
@@ -294,6 +299,7 @@ test("migrate advances cycleState past the removed Recovery day to Squat's new s
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3 },
   };
@@ -308,6 +314,7 @@ test("migrate shifts a non-Recovery cycleState dayIndex down past the removed sl
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [],
     cycleState: { dayIndex: 6, weekIndex: 1, cycleNumber: 1 }, // was Deadlift
   };
@@ -322,6 +329,7 @@ test("migrate discards an in-progress Recovery currentSession (nothing to contin
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: 2 },
   };
@@ -336,6 +344,7 @@ test("migrate's day-count-5 restructure runs exactly once, not repeatedly on rel
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 3 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 2);
@@ -355,6 +364,7 @@ test("migrate remaps completed history onto the 4-day cycle, sending old Accesso
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -375,6 +385,7 @@ test("migrate's day-count-4 restructure runs exactly once, not repeatedly on rel
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 5 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 4);
@@ -394,6 +405,7 @@ test("migrate remaps completed history onto the reintroduced 5-day cycle, shifti
     _dayCount4MigrationV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -413,6 +425,7 @@ test("migrate's day-count-5-reintroduce restructure runs exactly once, not repea
     _dayCount4MigrationV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, 5);
@@ -433,6 +446,7 @@ test("migrate remaps completed history onto the bonus-day restructure, sending o
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [
       { ...sessionWith([]), dayIndex: 1 }, // Bench, unchanged
       { ...sessionWith([]), dayIndex: 2 }, // Squat, unchanged
@@ -453,6 +467,7 @@ test("migrate's bonus-day restructure runs exactly once, not repeatedly on reloa
     _dayCount4MigrationV1: true,
     _dayCount5ReintroduceV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [{ ...sessionWith([]), dayIndex: 4 }],
   });
   assert.equal(once.sessionLogs[0].dayIndex, OLD_BONUS_ACCESSORY_DAY_INDEX);
@@ -470,6 +485,7 @@ test("migrate discards a stray in-progress session left at the old bonus-Accesso
     _dayCount5ReintroduceV1: true,
     _accessoryBonusMigrationV1: true,
     _pplRestructureV1: true,
+    _pplRestructureCycleFixV1: true,
     sessionLogs: [],
     currentSession: { ...sessionWith([]), dayIndex: OLD_BONUS_ACCESSORY_DAY_INDEX },
   };
@@ -536,7 +552,7 @@ test("migrate leaves already-legacy history at days 7 and 8 untouched — no col
   assert.deepEqual(migrated.sessionLogs.map((l) => l.dayIndex), [7, 8]);
 });
 
-test("migrate resets the live cycle pointer to day 1 (Pull A), week 1, clearing mainLiftsCompleted — but keeps cycleNumber and deloadOverride", () => {
+test("migrate resets the live cycle pointer to day 1 (Pull A), week 1, clearing mainLiftsCompleted — but keeps cycleNumber and deloadOverride, when there's no completed history to resume from", () => {
   const state = {
     ...BEFORE_PPL_RESTRUCTURE,
     sessionLogs: [],
@@ -544,6 +560,100 @@ test("migrate resets the live cycle pointer to day 1 (Pull A), week 1, clearing 
   };
   const migrated = migrate(state);
   assert.deepEqual(migrated.cycleState, { dayIndex: 1, weekIndex: 1, cycleNumber: 5, deloadOverride: true, mainLiftsCompleted: [] });
+});
+
+test("migrate resumes the live cycle pointer right after the last completed main lift, instead of discarding real progress", () => {
+  const state = {
+    ...BEFORE_PPL_RESTRUCTURE,
+    sessionLogs: [
+      { ...sessionWith([]), id: "a", date: "2026-10-31T00:00:00.000Z", dayIndex: 1, lift: "bench", weekIndex: 3, cycleNumber: 3, completed: true },
+    ],
+    cycleState: { dayIndex: 2, weekIndex: 2, cycleNumber: 3, deloadOverride: null },
+  };
+  const migrated = migrate(state);
+  // Bench's new-rotation day is 2 — next up is Squat (day 3) — same week/cycle, with bench marked done this week.
+  assert.deepEqual(migrated.cycleState, { dayIndex: 3, weekIndex: 3, cycleNumber: 3, deloadOverride: null, mainLiftsCompleted: ["bench"] });
+});
+
+test("migrate reconstructs mainLiftsCompleted from every main lift logged in the same old week/cycle as the most recent one", () => {
+  const state = {
+    ...BEFORE_PPL_RESTRUCTURE,
+    sessionLogs: [
+      { ...sessionWith([]), id: "a", date: "2026-10-29T00:00:00.000Z", dayIndex: 1, lift: "bench", weekIndex: 3, cycleNumber: 3, completed: true },
+      { ...sessionWith([]), id: "b", date: "2026-10-31T00:00:00.000Z", dayIndex: 2, lift: "squat", weekIndex: 3, cycleNumber: 3, completed: true },
+      { ...sessionWith([]), id: "c", date: "2026-10-15T00:00:00.000Z", dayIndex: 3, lift: "press", weekIndex: 2, cycleNumber: 3, completed: true }, // earlier week, excluded
+    ],
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
+  };
+  const migrated = migrate(state);
+  // Squat's new-rotation day is 3 — next up is Pull B (day 4).
+  assert.equal(migrated.cycleState.dayIndex, 4);
+  assert.equal(migrated.cycleState.weekIndex, 3);
+  assert.equal(migrated.cycleState.cycleNumber, 3);
+  assert.deepEqual([...migrated.cycleState.mainLiftsCompleted].sort(), ["bench", "squat"]);
+});
+
+test("migrate ignores incomplete sessions and non-main-lift (Pull/Recovery/Accessory) logs when finding the most recent main lift", () => {
+  const state = {
+    ...BEFORE_PPL_RESTRUCTURE,
+    sessionLogs: [
+      { ...sessionWith([]), id: "a", date: "2026-10-20T00:00:00.000Z", dayIndex: 1, lift: "squat", weekIndex: 2, cycleNumber: 1, completed: true },
+      { ...sessionWith([]), id: "b", date: "2026-10-31T00:00:00.000Z", dayIndex: 4, lift: null, weekIndex: 2, cycleNumber: 1, completed: true }, // Accessory day, no lift
+      { ...sessionWith([]), id: "c", date: "2026-11-01T00:00:00.000Z", dayIndex: 1, lift: "press", weekIndex: 2, cycleNumber: 1, completed: false }, // not completed
+    ],
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
+  };
+  const migrated = migrate(state);
+  // Squat's new-rotation day is 3 — next up is Pull B (day 4) — the later Accessory/incomplete logs don't count.
+  assert.equal(migrated.cycleState.dayIndex, 4);
+  assert.deepEqual(migrated.cycleState.mainLiftsCompleted, ["squat"]);
+});
+
+test("migrate falls back to the live cycleState's cycleNumber when the resumed log predates that field existing", () => {
+  const state = {
+    ...BEFORE_PPL_RESTRUCTURE,
+    sessionLogs: [{ ...sessionWith([]), id: "a", date: "2026-10-31T00:00:00.000Z", dayIndex: 1, lift: "deadlift", weekIndex: 3, completed: true }],
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 7 },
+  };
+  delete state.sessionLogs[0].cycleNumber;
+  const migrated = migrate(state);
+  assert.equal(migrated.cycleState.cycleNumber, 7);
+});
+
+// A real account that already loaded once under the original (buggy)
+// version of the PPL restructure migration — _pplRestructureV1 is already
+// true, having reset the live pointer to day 1/week 1 and thrown away real
+// in-progress position. The follow-up _pplRestructureCycleFixV1 migration
+// (below the restructure block in storage.js) must correct that on the next
+// load, without needing _pplRestructureV1 to run again.
+test("migrate corrects an already-migrated account's live pointer, for anyone who hit the original broken reset-to-day-1 restructure", () => {
+  const state = {
+    ...BEFORE_PPL_RESTRUCTURE,
+    _pplRestructureV1: true, // already ran under the old, broken version
+    sessionLogs: [
+      { ...sessionWith([]), id: "a", date: "2026-10-31T00:00:00.000Z", dayIndex: 2, lift: "bench", weekIndex: 3, cycleNumber: 3, completed: true },
+    ],
+    // What the old buggy migration left behind: reset to day 1/week 1, cycleNumber carried over.
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 3, deloadOverride: null, mainLiftsCompleted: [] },
+  };
+  const migrated = migrate(state);
+  assert.deepEqual(migrated.cycleState, { dayIndex: 3, weekIndex: 3, cycleNumber: 3, deloadOverride: null, mainLiftsCompleted: ["bench"] });
+  assert.equal(migrated._pplRestructureCycleFixV1, true);
+});
+
+test("migrate's cycle-pointer fix runs exactly once, not repeatedly on reload", () => {
+  const once = migrate({
+    ...BEFORE_PPL_RESTRUCTURE,
+    _pplRestructureV1: true,
+    sessionLogs: [{ ...sessionWith([]), id: "a", date: "2026-10-31T00:00:00.000Z", dayIndex: 2, lift: "bench", weekIndex: 3, cycleNumber: 3, completed: true }],
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 3, deloadOverride: null, mainLiftsCompleted: [] },
+  });
+  assert.equal(once.cycleState.dayIndex, 3);
+
+  // Simulate the user manually moving on to day 4 afterward — a second migrate() call must not re-derive and snap it back to 3.
+  const movedOn = { ...once, cycleState: { ...once.cycleState, dayIndex: 4 } };
+  const twice = migrate(movedOn);
+  assert.equal(twice.cycleState.dayIndex, 4, "must not re-derive a second time");
 });
 
 test("migrate discards ANY in-progress currentSession during the Push/Pull/Legs restructure, regardless of which day it was on", () => {

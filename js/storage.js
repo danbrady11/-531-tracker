@@ -202,6 +202,48 @@ function remapDayIndexForPplRestructure(dayIndex) {
   return PPL_RESTRUCTURE_REMAP_HISTORY[dayIndex] ?? dayIndex;
 }
 
+// New-rotation day index of each main lift (2=Bench, 3=Squat, 5=Press,
+// 6=Deadlift — see program.js's DAYS), used only to resume the live pointer
+// right after the last lift actually completed under the old program,
+// instead of blindly restarting at day 1/week 1 and losing real progress.
+const PPL_MAIN_LIFT_DAY_INDEX = { bench: 2, squat: 3, press: 5, deadlift: 6 };
+const PPL_DAY_COUNT = 6;
+
+// Resumes the live cycle pointer from the most recently completed main-lift
+// session under the OLD program, rather than resetting to day 1/week 1 and
+// discarding real in-progress position. The old 4-day rotation's dayIndex
+// has no sensible 1:1 mapping into the new day order, but every session log
+// already carries its own `lift`, which does: whichever lift was done last
+// tells us exactly which new-rotation day comes next. weekIndex/cycleNumber
+// are carried over from that same log (they're meaningful under both
+// programs), and mainLiftsCompleted is rebuilt from every other main lift
+// logged under that identical week/cycle — under the old rotation, all four
+// lifts were always done once per week, so this reconstructs "how far into
+// this week" accurately instead of just the single most recent lift.
+function deriveCycleStateForPplRestructure(sessionLogs, cycleState) {
+  const lastMain = sessionLogs
+    .filter((log) => log.completed && PPL_MAIN_LIFT_DAY_INDEX[log.lift])
+    .reduce((latest, log) => (!latest || new Date(log.date) > new Date(latest.date) ? log : latest), null);
+  if (!lastMain) {
+    return { dayIndex: 1, weekIndex: 1, mainLiftsCompleted: [] };
+  }
+  const sameWeekLifts = sessionLogs
+    .filter(
+      (log) =>
+        log.completed &&
+        PPL_MAIN_LIFT_DAY_INDEX[log.lift] &&
+        log.weekIndex === lastMain.weekIndex &&
+        (log.cycleNumber ?? 1) === (lastMain.cycleNumber ?? 1)
+    )
+    .map((log) => log.lift);
+  return {
+    dayIndex: (PPL_MAIN_LIFT_DAY_INDEX[lastMain.lift] % PPL_DAY_COUNT) + 1,
+    weekIndex: lastMain.weekIndex,
+    cycleNumber: lastMain.cycleNumber ?? cycleState.cycleNumber,
+    mainLiftsCompleted: [...new Set(sameWeekLifts)],
+  };
+}
+
 // Config additions to an existing day's accessory list (as opposed to a full
 // structural restructure) don't need a currentSession reset: nothing else
 // about the day changes shape, so an in-progress session can just gain the
@@ -351,16 +393,15 @@ export function migrate(state) {
 
   if (!state._pplRestructureV1) {
     merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForPplRestructure(log.dayIndex) }));
-    // The old 4-day rotation's dayIndex (1-4, Bench/Squat/Press/Deadlift) has
-    // no sensible mapping into the new 6-session Pull/Push/Legs order — it's
-    // an entirely different program shape, not a renumbering of the same
-    // days. Rather than guess, the live pointer restarts at day 1 (Pull A),
-    // week 1. cycleNumber is kept as-is (and so is deloadOverride, which is
-    // tied to that cycle number) — "keep cycle... logic as is" — but
-    // mainLiftsCompleted resets to empty, since that's brand new bookkeeping
-    // this restructure introduces (the week-advance gate is now "all four
-    // main lifts completed," not "every day in the old 4-day rotation done").
-    merged.cycleState = { ...merged.cycleState, dayIndex: 1, weekIndex: 1, mainLiftsCompleted: [] };
+    // Resume from wherever the user actually left off (see
+    // deriveCycleStateForPplRestructure), rather than restarting at day
+    // 1/week 1 and losing real in-progress position. cycleNumber and
+    // deloadOverride still come from the live cycleState when history gives
+    // no better answer (e.g. a brand-new account with no completed sessions).
+    merged.cycleState = {
+      ...merged.cycleState,
+      ...deriveCycleStateForPplRestructure(merged.sessionLogs, merged.cycleState),
+    };
     // Every single day's shape changed completely (the whole program
     // structure is different), so an in-progress session built under the
     // old 4-day program — whichever day it was on — can't be reconciled.
@@ -371,6 +412,22 @@ export function migrate(state) {
       merged.currentSession = null;
     }
     merged._pplRestructureV1 = true;
+  }
+
+  // One-time correction for the block above: it originally reset the live
+  // cycle pointer to day 1/week 1 unconditionally on every account, instead
+  // of resuming from the last completed main lift — discarding real
+  // in-progress position for anyone who'd already logged part of a week.
+  // Anyone who migrated before this fix shipped needs that corrected now;
+  // this re-derives it the same way, which is a harmless no-op for anyone
+  // whose _pplRestructureV1 ran under the already-fixed logic above (same
+  // inputs, same result).
+  if (!state._pplRestructureCycleFixV1) {
+    merged.cycleState = {
+      ...merged.cycleState,
+      ...deriveCycleStateForPplRestructure(merged.sessionLogs, merged.cycleState),
+    };
+    merged._pplRestructureCycleFixV1 = true;
   }
 
   // The optional "bonus" Accessory session is removed entirely as of this
