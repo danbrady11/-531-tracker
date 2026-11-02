@@ -6,8 +6,15 @@ test("the program is a 6-session Push/Pull/Legs rotation", () => {
   assert.equal(DAY_COUNT, 6);
 });
 
-test("the six days are Pull A, Push A, Legs A, Pull B, Push B, Legs B in order", () => {
-  assert.deepEqual([1, 2, 3, 4, 5, 6].map((i) => dayInfo(i).name), ["Pull A", "Push A", "Legs A", "Pull B", "Push B", "Legs B"]);
+test("the six days are Pull A, Push A, Legs A, Pull B, Push B, Legs B in order, with each main-lift day's name naming its lift", () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((i) => dayInfo(i).name), [
+    "Pull A",
+    "Push A (Bench)",
+    "Legs A (Squat)",
+    "Pull B",
+    "Push B (Press)",
+    "Legs B (Deadlift)",
+  ]);
 });
 
 test("Pull A and Pull B have no main lift or supplemental (kind accessory)", () => {
