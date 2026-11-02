@@ -7,6 +7,7 @@ const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", pres
 const REST_TIMER_CATEGORIES = [
   { key: "main", label: "Main lift" },
   { key: "bbb", label: "BBB" },
+  { key: "deadliftBackoff", label: "Deadlift back-off" },
   { key: "compound", label: "Compound accessory" },
   { key: "isolation", label: "Isolation accessory" },
   { key: "superset", label: "Superset (after \"b\")" },
@@ -82,9 +83,15 @@ export function renderSettings(root, ctx) {
           <input class="set-input" style="width:100%" type="number" step="0.5" value="${s.roundingIncrement}" data-action="setting" data-key="roundingIncrement" />
         </div>
       </div>
-      <div class="field">
-        <label>BBB percentage of TM (%)</label>
-        <input class="set-input" style="width:100%" type="number" step="5" value="${Math.round(s.bbbPercentage * 100)}" data-action="setting-pct" data-key="bbbPercentage" />
+      <div class="field-row">
+        <div class="field">
+          <label>BBB percentage of TM (%)</label>
+          <input class="set-input" style="width:100%" type="number" step="5" value="${Math.round(s.bbbPercentage * 100)}" data-action="setting-pct" data-key="bbbPercentage" />
+        </div>
+        <div class="field">
+          <label>Deadlift back-off percentage of TM (%)</label>
+          <input class="set-input" style="width:100%" type="number" step="5" value="${Math.round(s.deadliftBackoffPercentage * 100)}" data-action="setting-pct" data-key="deadliftBackoffPercentage" />
+        </div>
       </div>
       <div class="field">
         <label>Theme</label>

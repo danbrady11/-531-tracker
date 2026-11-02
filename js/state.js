@@ -1,6 +1,12 @@
 import { DAY_COUNT, WEEK_COUNT, dayInfo } from "./program.js";
 import { nextTrainingMax, epleyE1RM, LIFTS } from "./calc.js";
 
+// The four main lifts that gate 5/3/1 week advancement — Pull A/B have no
+// main lift and never count toward this, regardless of how many times
+// they're completed. Deliberately its own list rather than calc.js's LIFTS
+// (which also includes the long-retired trapBarDeadlift).
+export const WEEK_ADVANCE_LIFTS = ["bench", "squat", "press", "deadlift"];
+
 /**
  * How many weeks the given cycle runs before wrapping. With
  * deloadOnEvenCyclesOnly on (the default), only even cycle numbers (2, 4, 6,
@@ -18,23 +24,59 @@ export function effectiveWeekCount(cycleNumber, settings, deloadOverride = null)
   return cycleNumber % 2 === 0 ? WEEK_COUNT : WEEK_COUNT - 1;
 }
 
-/** Advance the cycle by one day. Wrapping past the last day (DAY_COUNT) advances the week; wrapping the cycle's last week completes it. */
-export function advanceCycle(cycleState, settings, deloadOverride = null) {
-  let { dayIndex, weekIndex, cycleNumber } = cycleState;
-  let cycleCompleted = false;
+/**
+ * Just the week/cycle wrap math: given a week about to advance by one,
+ * returns the resulting {weekIndex, cycleNumber} — week 1 of the next cycle
+ * if that was the cycle's last week, else the same cycle's next week.
+ * Factored out of advanceCycle so a caller that needs "when is this lift
+ * next due" (see today.js's Lift Status) can reuse the exact same wrap logic
+ * without going through the day-rotation/mainLiftsCompleted machinery.
+ */
+export function advanceWeek(weekIndex, cycleNumber, settings, deloadOverride = null) {
   const weekCount = effectiveWeekCount(cycleNumber, settings, deloadOverride);
+  let nextWeek = weekIndex + 1;
+  let nextCycle = cycleNumber;
+  if (nextWeek > weekCount) {
+    nextWeek = 1;
+    nextCycle += 1;
+  }
+  return { weekIndex: nextWeek, cycleNumber: nextCycle };
+}
+
+/**
+ * Advance the cycle by one session. The day pointer always rotates to the
+ * next session in order (Pull A -> Push A -> Legs A -> Pull B -> Push B ->
+ * Legs B -> Pull A, ...) regardless of what kind of session just finished.
+ *
+ * The 5/3/1 week, however, only advances once all four main lifts — Push
+ * A/Legs A/Push B/Legs B's bench/squat/press/deadlift — have been completed
+ * at least once since the last week advance, tracked in
+ * cycleState.mainLiftsCompleted (deduped by lift, order-independent — doing
+ * the same lift twice in a week before finishing the other three doesn't
+ * advance anything early). Pass the just-completed session's `lift` (null or
+ * omitted for a Pull day, which has none) as `completedLift`; omit it
+ * entirely to rotate the day without ever touching week/cycle state (used by
+ * the history-resync helper below, which can't reconstruct a partial week).
+ */
+export function advanceCycle(cycleState, settings, deloadOverride = null, completedLift = null) {
+  let { dayIndex, weekIndex, cycleNumber, mainLiftsCompleted = [] } = cycleState;
+  let cycleCompleted = false;
 
   dayIndex += 1;
-  if (dayIndex > DAY_COUNT) {
-    dayIndex = 1;
-    weekIndex += 1;
-    if (weekIndex > weekCount) {
-      weekIndex = 1;
-      cycleNumber += 1;
-      cycleCompleted = true;
+  if (dayIndex > DAY_COUNT) dayIndex = 1;
+
+  let nextMainLiftsCompleted = mainLiftsCompleted;
+  if (completedLift && WEEK_ADVANCE_LIFTS.includes(completedLift)) {
+    nextMainLiftsCompleted = mainLiftsCompleted.includes(completedLift) ? mainLiftsCompleted : [...mainLiftsCompleted, completedLift];
+    if (nextMainLiftsCompleted.length >= WEEK_ADVANCE_LIFTS.length) {
+      nextMainLiftsCompleted = [];
+      const before = weekIndex;
+      const weekCountBefore = effectiveWeekCount(cycleNumber, settings, deloadOverride);
+      ({ weekIndex, cycleNumber } = advanceWeek(weekIndex, cycleNumber, settings, deloadOverride));
+      cycleCompleted = before >= weekCountBefore;
     }
   }
-  return { cycleState: { dayIndex, weekIndex, cycleNumber }, cycleCompleted };
+  return { cycleState: { dayIndex, weekIndex, cycleNumber, mainLiftsCompleted: nextMainLiftsCompleted }, cycleCompleted };
 }
 
 /**
@@ -44,13 +86,22 @@ export function advanceCycle(cycleState, settings, deloadOverride = null) {
  * ignores state.cycleState itself, so it can't inherit drift from a stale
  * or manually-edited pointer — a way to resync to ground truth on demand.
  * Falls back to day 1/week 1/cycle 1 if nothing has ever been completed.
+ *
+ * Deliberately omits `completedLift` when calling advanceCycle — reliably
+ * reconstructing which main lifts were already completed earlier in that
+ * same week (toward the week-advance threshold) would mean replaying the
+ * whole week's history, not just its most recent session, which is more
+ * than this quick resync is meant to do. The day pointer still rotates by
+ * one as usual; week/cycle carry over from the last session unchanged, and
+ * mainLiftsCompleted resets to empty — a reasonable approximation for a
+ * manual "this looks off, fix it" tool, not a perfect replay.
  */
 export function deriveCycleStateFromHistory(sessionLogs, settings) {
   const completed = sessionLogs.filter((log) => log.completed);
-  if (completed.length === 0) return { dayIndex: 1, weekIndex: 1, cycleNumber: 1 };
+  if (completed.length === 0) return { dayIndex: 1, weekIndex: 1, cycleNumber: 1, mainLiftsCompleted: [] };
   const last = completed.reduce((a, b) => (new Date(b.date) > new Date(a.date) ? b : a));
   const { cycleState } = advanceCycle(
-    { dayIndex: last.dayIndex, weekIndex: last.weekIndex, cycleNumber: last.cycleNumber ?? 1 },
+    { dayIndex: last.dayIndex, weekIndex: last.weekIndex, cycleNumber: last.cycleNumber ?? 1, mainLiftsCompleted: [] },
     settings
   );
   return cycleState;
@@ -81,6 +132,29 @@ export function lastAccessoryLog(sessionLogs, exerciseName, setIndex) {
     return exact || sets[sets.length - 1];
   }
   return null;
+}
+
+// A Legs session is identified by its lift (squat or deadlift), not by day
+// index or name — this works identically for a current Legs A/B session and
+// any older squat/deadlift session logged under a since-retired day
+// structure, with no dependency on which program shape was active then.
+const LEGS_LIFTS = ["squat", "deadlift"];
+
+/**
+ * True if `dayIndexToStart` is a Legs day (Legs A/B) and fewer than `minDays`
+ * full days have passed since the most recent completed Legs session —
+ * powers the non-blocking "less than 3 days since your last leg day" notice
+ * on the splash screen. False (never a notice) if there's no prior Legs
+ * session to compare against, or the day in question isn't a Legs day.
+ */
+export function tooSoonForLegsDay(sessionLogs, dayLift, now = new Date(), minDays = 3) {
+  if (!LEGS_LIFTS.includes(dayLift)) return false;
+  const lastLegs = sessionLogs
+    .filter((log) => log.completed && LEGS_LIFTS.includes(log.lift))
+    .reduce((latest, log) => (!latest || new Date(log.date) > new Date(latest.date) ? log : latest), null);
+  if (!lastLegs) return false;
+  const msSince = now.getTime() - new Date(lastLegs.date).getTime();
+  return msSince < minDays * 24 * 60 * 60 * 1000;
 }
 
 /** AMRAP history for a lift: [{date, weekIndex, weight, reps, e1rm}], oldest first. */

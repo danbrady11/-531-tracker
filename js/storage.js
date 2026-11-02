@@ -17,12 +17,17 @@ function defaultState() {
       barWeight: 45,
       roundingIncrement: 5,
       bbbPercentage: 0.5,
+      // Deadlift's own supplemental percentage — "Back-off", not BBB (no BBB
+      // on Deadlift day at all). Editable separately from bbbPercentage.
+      deadliftBackoffPercentage: 0.65,
       tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5, trapBarDeadlift: 10 },
       // Rest between sets, by exercise category — editable in Settings so a
       // duration change never needs a code change. "superset" is the rest
       // taken only after the "b" exercise of a superset pair, since there's
-      // deliberately no rest between "a" and "b" themselves.
-      restTimerSec: { main: 180, bbb: 90, compound: 90, isolation: 60, superset: 60 },
+      // deliberately no rest between "a" and "b" themselves — unused by any
+      // live day now that supersets are gone, but still readable if any old
+      // synced/exported state carries a customized value.
+      restTimerSec: { main: 180, bbb: 90, deadliftBackoff: 120, compound: 90, isolation: 60, superset: 60 },
       theme: "system", // 'system' | 'light' | 'dark'
       // When true (the default), only even-numbered cycles (2, 4, 6, ...) run
       // a week-4 deload; odd-numbered cycles end after week 3 and roll
@@ -43,7 +48,11 @@ function defaultState() {
     // hand from the main screen; null means "use the settings-based rule".
     // Reset to null whenever a new cycle starts (see advanceCycle's caller
     // in app.js's finishDay) so each cycle defaults fresh unless re-toggled.
-    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1, deloadOverride: null },
+    // mainLiftsCompleted tracks which of the four main lifts (bench/squat/
+    // press/deadlift) have been completed so far this week — the 5/3/1 week
+    // only advances once all four are in it (see advanceCycle in state.js);
+    // reset to empty the moment it does.
+    cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1, deloadOverride: null, mainLiftsCompleted: [] },
     sessionLogs: [],
     bodyweightEntries: [],
     // Exercise names the user has added ad hoc to a workout at least once,
@@ -69,6 +78,9 @@ const ACCESSORY_RENAMES = {
   // (now on Deadlift day) and must keep its own name/history going
   // forward.
   "Seated cable row": "Seated cable row (wide/neutral)",
+  // Same movement, reworded when the program moved to the Push/Pull/Legs
+  // rotation (Pull A's first exercise).
+  "Pull-ups (weighted)": "Weighted pull-ups",
 };
 
 function renameAccessoryEntries(accessorySets) {
@@ -174,20 +186,40 @@ function remapDayIndexForAccessoryBonusLivePointer(dayIndex) {
   return dayIndex <= 3 ? dayIndex : 4;
 }
 
-// Config additions to an existing day's accessory list (as opposed to the
-// structural restructures above) don't need a currentSession reset: unlike
-// those, nothing else about the day changes shape, so an in-progress session
-// can just gain the new exercise's sets appended to the end of its
-// accessorySets, leaving every other entry (and anything already logged on
-// it) untouched. Not flagged/versioned like the migrations above — it's
-// naturally idempotent (skipped once the exercise is already present), so it
-// simply runs on every load until the exercise is there.
-const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
-  { dayIndex: 2, exerciseName: "Leg extension", sets: 4 },
-  { dayIndex: 4, exerciseName: "Hip thrust", sets: 3 },
-  { dayIndex: 4, exerciseName: "Machine leg curl", sets: 3 },
-  { dayIndex: 4, exerciseName: "Leg extension", sets: 3 },
-];
+// One-time program restructure: the single-lift-per-day rotation (Bench,
+// Squat, Press, Deadlift — old days 1-4) is replaced entirely by a 6-session
+// Push/Pull/Legs rotation (Pull A, Push A, Legs A, Pull B, Push B, Legs B).
+// Old day numbers 1-4 now mean something completely different (Pull A/Push
+// A/Legs A/Pull B), so old history can't stay at those numbers — it moves to
+// reserved slots 10-13 (see program.js's LEGACY_DAYS), frozen under their
+// original Bench/Squat/Press/Deadlift names. Old day 6 (Recovery, already a
+// legacy-only slot) collides with the new live Legs B, so it moves from 6 to
+// 9. Old days 7 and 8 (both already-legacy Accessory slots) don't collide
+// with the new 1-6 range and are untouched.
+const PPL_RESTRUCTURE_REMAP_HISTORY = { 1: 10, 2: 11, 3: 12, 4: 13, 6: 9 };
+
+function remapDayIndexForPplRestructure(dayIndex) {
+  return PPL_RESTRUCTURE_REMAP_HISTORY[dayIndex] ?? dayIndex;
+}
+
+// Config additions to an existing day's accessory list (as opposed to a full
+// structural restructure) don't need a currentSession reset: nothing else
+// about the day changes shape, so an in-progress session can just gain the
+// new exercise's sets appended to the end of its accessorySets, leaving
+// every other entry (and anything already logged on it) untouched. Not
+// flagged/versioned — it's naturally idempotent (skipped once the exercise
+// is already present), so it simply runs on every load until the exercise
+// is there.
+//
+// Empty as of the Push/Pull/Legs restructure: the day-number meanings it
+// used to target (old day 2 = Squat, old day 4 = Deadlift) have been
+// completely repurposed (new day 2 = Push A, new day 4 = Pull B) — reusing
+// those old entries here would wrongly backfill e.g. Leg extension onto a
+// Push A session. The restructure migration below discards every
+// in-progress session outright instead, so there's nothing stale left for
+// this list to patch; add new entries here the next time a plain config
+// addition (not a full restructure) needs one.
+const CURRENT_SESSION_ACCESSORY_BACKFILLS = [];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
   if (!currentSession) return currentSession;
@@ -315,6 +347,30 @@ export function migrate(state) {
       }
     }
     merged._accessoryBonusMigrationV1 = true;
+  }
+
+  if (!state._pplRestructureV1) {
+    merged.sessionLogs = merged.sessionLogs.map((log) => ({ ...log, dayIndex: remapDayIndexForPplRestructure(log.dayIndex) }));
+    // The old 4-day rotation's dayIndex (1-4, Bench/Squat/Press/Deadlift) has
+    // no sensible mapping into the new 6-session Pull/Push/Legs order — it's
+    // an entirely different program shape, not a renumbering of the same
+    // days. Rather than guess, the live pointer restarts at day 1 (Pull A),
+    // week 1. cycleNumber is kept as-is (and so is deloadOverride, which is
+    // tied to that cycle number) — "keep cycle... logic as is" — but
+    // mainLiftsCompleted resets to empty, since that's brand new bookkeeping
+    // this restructure introduces (the week-advance gate is now "all four
+    // main lifts completed," not "every day in the old 4-day rotation done").
+    merged.cycleState = { ...merged.cycleState, dayIndex: 1, weekIndex: 1, mainLiftsCompleted: [] };
+    // Every single day's shape changed completely (the whole program
+    // structure is different), so an in-progress session built under the
+    // old 4-day program — whichever day it was on — can't be reconciled.
+    // Drop it; a fresh, correctly-shaped session gets built automatically
+    // next time Today renders (see ensureCurrentSession in app.js). No
+    // completed history is affected.
+    if (merged.currentSession) {
+      merged.currentSession = null;
+    }
+    merged._pplRestructureV1 = true;
   }
 
   // The optional "bonus" Accessory session is removed entirely as of this

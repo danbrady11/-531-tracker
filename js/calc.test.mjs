@@ -147,6 +147,19 @@ test("bbbSets: deadlift and press have no BBB minimum", () => {
   assert.ok(lightPress.every((s) => s.weight === 75));
 });
 
+test("bbbSets: custom setsCount/repsCount override the classic 5x10 (e.g. 3x10 BBB, 2x5 Deadlift back-off)", () => {
+  const threeByTen = bbbSets(200, 1, 0.5, 5, "bench", "bbb", true, 3, 10);
+  assert.equal(threeByTen.length, 3);
+  assert.ok(threeByTen.every((s) => s.weight === 135 && s.targetReps === 10)); // floor still applies
+
+  const backoff = bbbSets(300, 1, 0.65, 5, "deadlift", "backoff", true, 2, 5);
+  assert.equal(backoff.length, 2);
+  assert.ok(backoff.every((s) => s.weight === 195 && s.targetReps === 5 && s.type === "backoff")); // 65% of 300
+
+  const backoffDeload = bbbSets(300, 4, 0.65, 5, "deadlift", "backoff", true, 2, 5);
+  assert.equal(backoffDeload.length, 0);
+});
+
 test("warmupSets: 40/50/60% x 5/5/3", () => {
   const sets = warmupSets(300, 5);
   assert.equal(sets[0].weight, 120);

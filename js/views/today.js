@@ -1,7 +1,7 @@
 import { dayInfo, DAY_COUNT, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
-import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceCycle, amrapHistory } from "../state.js";
-import { LIFT_META, LIFT_ORDER } from "../lift-meta.js";
+import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceWeek, amrapHistory, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS } from "../state.js";
+import { LIFT_META } from "../lift-meta.js";
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -231,41 +231,23 @@ function addExerciseControls(customExercises) {
 
 const DAY_KIND_LABEL = { main: "Main lift day", recovery: "Recovery day", accessory: "Accessory day" };
 
-// True if a is strictly earlier than b in cycle/week order.
-function isBeforePosition(a, b) {
-  return a.cycleNumber < b.cycleNumber || (a.cycleNumber === b.cycleNumber && a.weekIndex < b.weekIndex);
-}
-
 /**
- * Per-lift "when you'll next train it" strip for the splash screen: one step
- * past its most recent completed session, reusing advanceCycle's own
- * week/cycle-wrap logic (dayIndex: DAY_COUNT forces it to treat this as the
- * last day of that week, which is all that's needed to land on the correct
- * next week — or next cycle's week 1, if that was the cycle's last week).
- * Skips a lift entirely if it has no completed history yet.
- *
- * A lift whose last session falls in the currently active cycle picks up
- * that cycle's manual deload override (if any) — it's known and applies.
- * For any OLDER (already-completed) cycle, there's no override on record
- * any more (it resets to null once that cycle finishes), so the projection
- * falls back to the settings-based parity rule — which can land on a week
- * that cycle never actually had (e.g. "C2:W4" when deload was manually
- * turned off and that cycle really ended after week 3). Rather than show
- * that stale, now-impossible position, clamp the result forward to the
- * current actual cycle position: a lift can never really be "next" earlier
- * than where the whole program already stands.
+ * Per-lift "when you'll next train it" strip for the splash screen. The
+ * 5/3/1 week only advances once all four main lifts have been completed
+ * (see advanceCycle in state.js), so every main lift shares the exact same
+ * current cycle/week — the only question per lift is whether it's already
+ * been checked off this week (cycleState.mainLiftsCompleted) or is still
+ * due. Skips a lift entirely if it has no completed history yet.
  */
 function liftStatusHtml(sessionLogs, settings, currentCycleState) {
   const lastByLift = lastCompletedByLift(sessionLogs);
-  const rows = LIFT_ORDER.filter((lift) => lastByLift[lift])
+  const completedThisWeek = currentCycleState.mainLiftsCompleted || [];
+  const rows = WEEK_ADVANCE_LIFTS.filter((lift) => lastByLift[lift])
     .map((lift) => {
-      const info = lastByLift[lift];
-      const deloadOverride = info.cycleNumber === currentCycleState.cycleNumber ? currentCycleState.deloadOverride : null;
-      let { cycleState } = advanceCycle({ dayIndex: DAY_COUNT, weekIndex: info.weekIndex, cycleNumber: info.cycleNumber }, settings, deloadOverride);
-      if (isBeforePosition(cycleState, currentCycleState)) {
-        cycleState = { cycleNumber: currentCycleState.cycleNumber, weekIndex: currentCycleState.weekIndex };
-      }
-      return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${cycleState.cycleNumber}:W${cycleState.weekIndex} next</span></div>`;
+      const position = completedThisWeek.includes(lift)
+        ? advanceWeek(currentCycleState.weekIndex, currentCycleState.cycleNumber, settings, currentCycleState.deloadOverride)
+        : { weekIndex: currentCycleState.weekIndex, cycleNumber: currentCycleState.cycleNumber };
+      return `<div class="bw-row"><span>${LIFT_META[lift].label}</span><span>C${position.cycleNumber}:W${position.weekIndex} next</span></div>`;
     })
     .join("");
   return rows ? `<div class="card"><h3>Lift Status</h3>${rows}</div>` : "";
@@ -300,6 +282,24 @@ function renderSplashScreen(root, ctx) {
     })
     .join("");
 
+  // Non-blocking: the recommended next session is a Legs day, but it hasn't
+  // been 3 full days since the last one. Start Workout still works as
+  // normal below — this just offers the alternative of doing the next
+  // session in rotation (always a Pull day, right after any Legs day)
+  // first instead, via the same out-of-order day picker chooseDay already
+  // uses, so it doesn't touch the recommended-next pointer either.
+  const legsNoticeNeeded = tooSoonForLegsDay(state.sessionLogs, day.lift);
+  const nextDayIndex = (dayIndex % DAY_COUNT) + 1;
+  const legsNoticeHtml = legsNoticeNeeded
+    ? `<div class="card" style="border-color:var(--warn);">
+        <div class="set-meta">Less than 3 days since your last leg day. Rest, or do the next upper day first.</div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-sm" data-action="start-day" data-day="${dayIndex}">Start it anyway</button>
+          <button class="btn btn-sm" data-action="start-day" data-day="${nextDayIndex}">Do ${escapeHtml(dayInfo(nextDayIndex).name)} instead</button>
+        </div>
+      </div>`
+    : "";
+
   root.innerHTML = `
     <div class="card splash-hero">
       <div class="splash-kicker">Up next · Cycle ${cycleNumber} · Week ${weekIndex} of ${weekCount}</div>
@@ -311,6 +311,7 @@ function renderSplashScreen(root, ctx) {
       </label>
       <button class="btn btn-primary btn-block" style="margin-top:14px;" data-action="start-day" data-day="${dayIndex}">Start Workout</button>
     </div>
+    ${legsNoticeHtml}
     ${liftStatusHtml(state.sessionLogs, state.settings, state.cycleState)}
     <div class="section-label">Or pick a different day</div>
     <div class="card splash-other-days">${otherDaysHtml}</div>
@@ -367,23 +368,29 @@ function renderWorkoutScreen(root, ctx) {
     if (day.supplemental) {
       const activeType = session.supplementalType || day.supplemental;
       const isAlt = day.supplementalAlt && activeType === day.supplementalAlt.type;
-      const bbbPct = Math.round(state.settings.bbbPercentage * 100);
-      // The alt shares BBB's exact percentage-of-TM math (see calc.js's
-      // bbbSets), so its heading shows the same percentage — just under its
-      // own movement name and 5x10 instead of "BBB".
+      // The alt shares the main scheme's exact percentage-of-TM math (see
+      // calc.js's bbbSets), so its heading shows the same percentage — just
+      // under its own movement name and set/rep scheme instead of the main
+      // label. Deadlift's "backoff" has its own percentage setting instead
+      // of sharing BBB's.
+      const percentage = day.supplemental === "backoff" ? state.settings.deadliftBackoffPercentage : state.settings.bbbPercentage;
+      const pct = Math.round(percentage * 100);
+      const mainLabel = day.supplemental === "fsl" ? "FSL" : day.supplemental === "backoff" ? "Back-off" : "BBB";
       const label = isAlt
-        ? `${escapeHtml(day.supplementalAlt.label)} ${day.supplementalAlt.sets}×${day.supplementalAlt.targetReps} (${bbbPct}%)`
+        ? `${escapeHtml(day.supplementalAlt.label)} ${day.supplementalAlt.sets}×${day.supplementalAlt.targetReps} (${pct}%)`
         : day.supplemental === "fsl"
           ? "FSL 3×8"
-          : `BBB 5×10 (${bbbPct}%)`;
+          : `${mainLabel} ${day.supplementalConfig.sets}×${day.supplementalConfig.targetReps} (${pct}%)`;
       // Falls back to "main" for FSL, which no day currently uses and has no
-      // rest duration of its own in Settings — only BBB was asked for. An alt
-      // scheme (e.g. belt squat) reuses BBB's rest duration rather than
-      // adding its own Settings category for one exercise.
-      const suppRestSec = isAlt ? restTimerSec.bbb : restTimerSec[day.supplemental] ?? restTimerSec.main;
+      // rest duration of its own in Settings — only BBB/back-off were asked
+      // for. An alt scheme (e.g. belt squat) reuses BBB's rest duration
+      // rather than adding its own Settings category for one exercise.
+      const suppRestSec = isAlt
+        ? restTimerSec.bbb
+        : (day.supplemental === "backoff" ? restTimerSec.deadliftBackoff : restTimerSec[day.supplemental]) ?? restTimerSec.main;
       const toggleHtml = day.supplementalAlt
         ? `<div class="pill-tabs" style="margin-bottom:8px;">
-            <button class="pill-tab ${!isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplemental}">${day.supplemental === "fsl" ? "FSL" : "BBB"}</button>
+            <button class="pill-tab ${!isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplemental}">${mainLabel}</button>
             <button class="pill-tab ${isAlt ? "active" : ""}" data-action="set-supplemental-type" data-type="${day.supplementalAlt.type}">${escapeHtml(day.supplementalAlt.label)}</button>
           </div>`
         : "";
