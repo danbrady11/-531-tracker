@@ -1,12 +1,12 @@
 // Static description of the 6-session Push/Pull/Legs rotation. Day numbers
-// are 1-6: Pull A, Push A, Legs A, Pull B, Push B, Legs B — the four main-lift
-// days carry their lift in their name too (e.g. "Push A (Bench)"), since
-// Push/Legs alone no longer says which lift. The intended weekly schedule has
-// a rest day after each Legs session, but rest days aren't modeled here at
-// all — they're never logged, and the next session is always just "whichever
-// comes next in this order," regardless of how many calendar days separate
-// two logged sessions. See state.js's advanceCycle for how the 5/3/1 week
-// only advances once all four main lifts (on Push A, Legs A, Push B, Legs B)
+// are 1-6: Pull A, Bench (Push A), Squat (Legs A), Pull B, Press (Push B),
+// Deadlift (Legs B) — each main-lift day is just named for its lift, since
+// each lift only appears once; only Pull A/B need the A/B suffix. The
+// intended weekly schedule has a rest day after each Legs session, but rest
+// days aren't modeled here at all — they're never logged, and the next
+// session is always just "whichever comes next in this order," regardless of
+// how many calendar days separate two logged sessions. See state.js's
+// advanceCycle for how the 5/3/1 week only advances once all four main lifts
 // have been completed — Pull A/B never touch it.
 
 // Rest-timer bucket for a set-based accessory. An exercise named in
@@ -55,7 +55,7 @@ export const DAYS = {
     ],
   },
   2: {
-    name: "Push A (Bench)",
+    name: "Bench",
     kind: "main",
     lift: "bench",
     supplemental: "bbb",
@@ -71,7 +71,7 @@ export const DAYS = {
     ],
   },
   3: {
-    name: "Legs A (Squat)",
+    name: "Squat",
     kind: "main",
     lift: "squat",
     supplemental: "bbb",
@@ -103,7 +103,7 @@ export const DAYS = {
     ],
   },
   5: {
-    name: "Push B (Press)",
+    name: "Press",
     kind: "main",
     lift: "press",
     supplemental: "bbb",
@@ -117,7 +117,7 @@ export const DAYS = {
     ],
   },
   6: {
-    name: "Legs B (Deadlift)",
+    name: "Deadlift",
     kind: "main",
     lift: "deadlift",
     // No BBB on Deadlift — "Back-off" is its own supplemental type: 2x5 at
