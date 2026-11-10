@@ -94,9 +94,11 @@ test("restCategoryFor: the global compound list applies by exercise name, no per
     [1, "Lateral raise"],
     [1, "Reverse pec deck / cable reverse fly"],
     [1, "Curls"],
+    [1, "Machine crunch"],
     [4, "Shrugs (straps)"],
     [4, "Hammer curls"],
     [4, "Incline DB curl"],
+    [4, "Machine crunch"],
     [2, "Cable fly (mid-height)"],
     [2, "Cable rope overhead extension"],
     [3, "Cable crunch"],
@@ -119,6 +121,7 @@ test("Pull A (1): full exercise list in order", () => {
     "Reverse pec deck / cable reverse fly",
     "Lateral raise",
     "Curls",
+    "Machine crunch",
   ]);
   assert.equal(accessoryDefFor(1, "Weighted pull-ups").sets, 4);
   assert.equal(accessoryDefFor(1, "Weighted pull-ups").repsLabel, "6–10");
@@ -134,6 +137,10 @@ test("Pull A (1): full exercise list in order", () => {
   assert.equal(accessoryDefFor(1, "Lateral raise").repsLabel, "12–20");
   assert.equal(accessoryDefFor(1, "Curls").sets, 4);
   assert.equal(accessoryDefFor(1, "Curls").repsLabel, "10–15");
+  const crunch = accessoryDefFor(1, "Machine crunch");
+  assert.equal(crunch.sets, 3);
+  assert.equal(crunch.repsLabel, "10–15");
+  assert.equal(crunch.cue, "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis.");
 });
 
 test("Push A (2): full exercise list in order", () => {
@@ -182,6 +189,7 @@ test("Pull B (4): full exercise list in order", () => {
     "Lateral raise",
     "Hammer curls",
     "Incline DB curl",
+    "Machine crunch",
   ]);
   const chinUps = accessoryDefFor(4, "Chin-ups");
   assert.equal(chinUps.sets, 4);
@@ -200,6 +208,10 @@ test("Pull B (4): full exercise list in order", () => {
   assert.equal(accessoryDefFor(4, "Hammer curls").repsLabel, "10–15");
   assert.equal(accessoryDefFor(4, "Incline DB curl").sets, 3);
   assert.equal(accessoryDefFor(4, "Incline DB curl").repsLabel, "10–12");
+  const crunch = accessoryDefFor(4, "Machine crunch");
+  assert.equal(crunch.sets, 3);
+  assert.equal(crunch.repsLabel, "10–15");
+  assert.equal(crunch.cue, "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis.");
 });
 
 test("Push B (5): full exercise list in order", () => {

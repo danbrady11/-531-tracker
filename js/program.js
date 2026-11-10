@@ -52,6 +52,7 @@ export const DAYS = {
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Curls", sets: 4, repsLabel: "10–15" },
+      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis." },
     ],
   },
   2: {
@@ -100,6 +101,7 @@ export const DAYS = {
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Hammer curls", sets: 3, repsLabel: "10–15" },
       { name: "Incline DB curl", sets: 3, repsLabel: "10–12" },
+      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis." },
     ],
   },
   5: {

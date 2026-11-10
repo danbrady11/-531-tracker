@@ -253,15 +253,14 @@ function deriveCycleStateForPplRestructure(sessionLogs, cycleState) {
 // is already present), so it simply runs on every load until the exercise
 // is there.
 //
-// Empty as of the Push/Pull/Legs restructure: the day-number meanings it
-// used to target (old day 2 = Squat, old day 4 = Deadlift) have been
-// completely repurposed (new day 2 = Push A, new day 4 = Pull B) — reusing
-// those old entries here would wrongly backfill e.g. Leg extension onto a
-// Push A session. The restructure migration below discards every
-// in-progress session outright instead, so there's nothing stale left for
-// this list to patch; add new entries here the next time a plain config
-// addition (not a full restructure) needs one.
-const CURRENT_SESSION_ACCESSORY_BACKFILLS = [];
+// Day indices here are the current (post-restructure) numbering — 1 = Pull
+// A, 4 = Pull B — since the restructure migration above already discards
+// any in-progress session built under the old numbering, so nothing stale
+// is left for these entries to misfire against.
+const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
+  { dayIndex: 1, exerciseName: "Machine crunch", sets: 3 },
+  { dayIndex: 4, exerciseName: "Machine crunch", sets: 3 },
+];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
   if (!currentSession) return currentSession;

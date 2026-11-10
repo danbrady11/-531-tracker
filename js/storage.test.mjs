@@ -690,12 +690,46 @@ test("migrate leaves a currentSession alone when all migrations (including the P
   assert.equal(migrated.currentSession.dayIndex, 3);
 });
 
-test("migrate leaves a currentSession's accessorySets alone when there are no backfills configured for its day (empty backfill list post-restructure)", () => {
+test("migrate leaves a currentSession's accessorySets alone when there are no backfills configured for its day", () => {
   const state = {
     ...ALL_MIGRATIONS_DONE,
     sessionLogs: [],
-    currentSession: { ...sessionWith([{ exerciseName: "Weighted pull-ups", setIndex: 0, weight: 25, reps: 8, completed: true }]), dayIndex: 1 },
+    // Day 2 (Bench) has no backfill entries — only Pull A (1) and Pull B (4) do, for Machine crunch.
+    currentSession: { ...sessionWith([{ exerciseName: "Incline barbell press", setIndex: 0, weight: 95, reps: 8, completed: true }]), dayIndex: 2 },
   };
   const migrated = migrate(state);
-  assert.deepEqual(migrated.currentSession.accessorySets, [{ exerciseName: "Weighted pull-ups", setIndex: 0, weight: 25, reps: 8, completed: true }]);
+  assert.deepEqual(migrated.currentSession.accessorySets, [{ exerciseName: "Incline barbell press", setIndex: 0, weight: 95, reps: 8, completed: true }]);
+});
+
+test("migrate backfills Machine crunch onto an in-progress Pull A or Pull B session, prefilling from its own prior history", () => {
+  for (const dayIndex of [1, 4]) {
+    const state = {
+      ...ALL_MIGRATIONS_DONE,
+      sessionLogs: [sessionWith([{ exerciseName: "Machine crunch", setIndex: 0, weight: 40, reps: 12, completed: true }])],
+      currentSession: { ...sessionWith([{ exerciseName: "Curls", setIndex: 0, weight: 25, reps: 10, completed: true }]), dayIndex },
+    };
+    const migrated = migrate(state);
+    const crunchSets = migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Machine crunch");
+    assert.equal(crunchSets.length, 3, `dayIndex ${dayIndex}`);
+    // lastAccessoryLog falls back to the most recent logged set for any setIndex that wasn't itself logged before.
+    assert.deepEqual(crunchSets[0], { exerciseName: "Machine crunch", setIndex: 0, weight: 40, reps: 12, completed: false }, `dayIndex ${dayIndex}`);
+    assert.deepEqual(crunchSets[1], { exerciseName: "Machine crunch", setIndex: 1, weight: 40, reps: 12, completed: false }, `dayIndex ${dayIndex}`);
+  }
+});
+
+test("migrate's Machine crunch backfill is idempotent — doesn't duplicate once already present", () => {
+  const state = {
+    ...ALL_MIGRATIONS_DONE,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([
+        { exerciseName: "Machine crunch", setIndex: 0, weight: 35, reps: 12, completed: true },
+        { exerciseName: "Machine crunch", setIndex: 1, weight: 35, reps: 12, completed: false },
+        { exerciseName: "Machine crunch", setIndex: 2, weight: null, reps: null, completed: false },
+      ]),
+      dayIndex: 1,
+    },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Machine crunch").length, 3);
 });
