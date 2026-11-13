@@ -7,6 +7,7 @@ import { renderToday } from "./views/today.js";
 import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
 import { renderCalendar } from "./views/calendar.js";
+import { renderRehab } from "./views/rehab.js";
 import { startRestTimer, cancelRestTimer, subscribeRestTimer, formatMs } from "./timer.js";
 import {
   getSyncCode,
@@ -67,9 +68,13 @@ function scheduleCloudPush() {
 function wouldLoseData(current, incoming) {
   const curSessions = current?.sessionLogs?.length ?? 0;
   const curBw = current?.bodyweightEntries?.length ?? 0;
+  const curRehab = current?.rehabEntries?.length ?? 0;
   const incSessions = incoming?.sessionLogs?.length ?? 0;
   const incBw = incoming?.bodyweightEntries?.length ?? 0;
-  return (curSessions > 0 && incSessions < curSessions) || (curBw > 0 && incBw < curBw);
+  const incRehab = incoming?.rehabEntries?.length ?? 0;
+  return (
+    (curSessions > 0 && incSessions < curSessions) || (curBw > 0 && incBw < curBw) || (curRehab > 0 && incRehab < curRehab)
+  );
 }
 
 function adoptRemoteState(payload) {
@@ -262,6 +267,8 @@ function renderCurrentView() {
     renderHistory(viewRoot, ctx);
   } else if (currentView === "calendar") {
     renderCalendar(viewRoot, ctx);
+  } else if (currentView === "rehab") {
+    renderRehab(viewRoot, ctx);
   } else if (currentView === "settings") {
     renderSettings(viewRoot, ctx);
   }
@@ -871,6 +878,16 @@ const actions = {
   // simple tradeoff rather than adding an id to every entry for it).
   deleteBodyweightEntry(date) {
     state.bodyweightEntries = state.bodyweightEntries.filter((e) => e.date !== date);
+    persist();
+    renderCurrentView();
+  },
+  addRehabEntry(date, modality, minutes) {
+    state.rehabEntries.push({ id: `${Date.now()}`, date, modality, minutes });
+    persist();
+    renderCurrentView();
+  },
+  deleteRehabEntry(id) {
+    state.rehabEntries = state.rehabEntries.filter((e) => e.id !== id);
     persist();
     renderCurrentView();
   },

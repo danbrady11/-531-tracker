@@ -227,6 +227,19 @@ export function bodyweightRollingAverage(entries) {
   });
 }
 
+/** Total minutes logged per modality in the trailing N days (default 7), ending today. */
+export function rehabMinutesByModality(rehabEntries, days = 7) {
+  const end = Date.now();
+  const start = end - (days - 1) * 24 * 60 * 60 * 1000;
+  const totals = {};
+  for (const entry of rehabEntries) {
+    const t = new Date(entry.date).getTime();
+    if (t < start || t > end) continue;
+    totals[entry.modality] = (totals[entry.modality] || 0) + entry.minutes;
+  }
+  return totals;
+}
+
 /** Total working weight lifted in a session: completed main + supplemental sets (accessories excluded). */
 export function sessionVolume(log) {
   const mainVol = (log.mainSets || []).reduce(

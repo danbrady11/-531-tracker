@@ -55,6 +55,9 @@ function defaultState() {
     cycleState: { dayIndex: 1, weekIndex: 1, cycleNumber: 1, deloadOverride: null, mainLiftsCompleted: [] },
     sessionLogs: [],
     bodyweightEntries: [],
+    // Rehab/recovery modality log: { id, date, modality, minutes }. modality
+    // is one of REHAB_MODALITIES' keys (rehab-meta.js) — iceBath/sauna/redLight.
+    rehabEntries: [],
     // Exercise names the user has added ad hoc to a workout at least once,
     // remembered so they can be picked from a dropdown next time instead of
     // retyped. Separate from the fixed per-day accessory lists in program.js.
@@ -306,6 +309,7 @@ export function migrate(state) {
     accessorySets: renameAccessoryEntries(log.accessorySets),
   }));
   merged.bodyweightEntries = Array.isArray(state.bodyweightEntries) ? state.bodyweightEntries : [];
+  merged.rehabEntries = Array.isArray(state.rehabEntries) ? state.rehabEntries : [];
   merged.customExercises = [
     ...new Set((Array.isArray(state.customExercises) ? state.customExercises : []).map((n) => ACCESSORY_RENAMES[n] || n)),
   ];

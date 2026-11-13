@@ -101,6 +101,22 @@ test("migrate preserves a customized deadliftBackoffPercentage", () => {
   assert.equal(migrated.settings.deadliftBackoffPercentage, 0.6);
 });
 
+test("migrate defaults rehabEntries to an empty array for a brand-new state", () => {
+  const migrated = migrate({});
+  assert.deepEqual(migrated.rehabEntries, []);
+});
+
+test("migrate preserves existing rehabEntries", () => {
+  const entries = [{ id: "1", date: "2026-11-10T00:00:00.000Z", modality: "sauna", minutes: 20 }];
+  const migrated = migrate({ rehabEntries: entries });
+  assert.deepEqual(migrated.rehabEntries, entries);
+});
+
+test("migrate falls back to an empty array when rehabEntries isn't an array", () => {
+  const migrated = migrate({ rehabEntries: "garbage" });
+  assert.deepEqual(migrated.rehabEntries, []);
+});
+
 test("migrate defaults trapBarDeadlift TM to 0 for an existing user, not copied from deadlift", () => {
   const migrated = migrate({ trainingMaxes: { deadlift: { currentValue: 225, updatedAt: "2026-01-01" } } });
   assert.equal(migrated.trainingMaxes.deadlift.currentValue, 225);

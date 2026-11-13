@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS } from "./state.js";
+import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, rehabMinutesByModality } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -343,4 +343,21 @@ test("accessoryRepVolumeSeries: returns empty series when neither exercise has a
   const { xLabels, series } = accessoryRepVolumeSeries([], ["Pull-ups (weighted)", "Chin-ups"]);
   assert.deepEqual(xLabels, []);
   assert.deepEqual(series.map((s) => s.values), [[], []]);
+});
+
+test("rehabMinutesByModality: sums minutes per modality within the trailing window", () => {
+  const now = Date.now();
+  const daysAgo = (n) => new Date(now - n * 24 * 60 * 60 * 1000).toISOString();
+  const entries = [
+    { id: "1", date: daysAgo(0), modality: "iceBath", minutes: 10 },
+    { id: "2", date: daysAgo(2), modality: "iceBath", minutes: 15 },
+    { id: "3", date: daysAgo(1), modality: "sauna", minutes: 20 },
+    { id: "4", date: daysAgo(10), modality: "redLight", minutes: 30 }, // outside the 7-day window
+  ];
+  const totals = rehabMinutesByModality(entries, 7);
+  assert.deepEqual(totals, { iceBath: 25, sauna: 20 });
+});
+
+test("rehabMinutesByModality: returns an empty object when there are no entries in range", () => {
+  assert.deepEqual(rehabMinutesByModality([], 7), {});
 });
