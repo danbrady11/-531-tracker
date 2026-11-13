@@ -1,4 +1,4 @@
-const CACHE_NAME = "531-tracker-v69";
+const CACHE_NAME = "531-tracker-v70";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -26,9 +26,22 @@ const PRECACHE_URLS = [
   "./icons/favicon-32.png",
 ];
 
+// cache.addAll() fetches through the browser's regular HTTP cache, not just
+// the Cache Storage API's own cache — so on an update, a file the browser
+// still considers HTTP-fresh (e.g. within GitHub Pages' max-age window) can
+// get silently reused from that stale HTTP cache while other files fetch
+// genuinely new, leaving this version's cache internally inconsistent (seen
+// in practice: a new index.html with a new nav tab, paired with an old
+// cached app.js that doesn't know the new view exists — a dead tab and no
+// error, since nothing actually threw). { cache: "reload" } forces every
+// precache fetch to bypass HTTP cache and hit the network, so a given
+// CACHE_NAME's contents are always from one consistent deploy.
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => Promise.all(PRECACHE_URLS.map((url) => fetch(url, { cache: "reload" }).then((response) => cache.put(url, response)))))
+      .then(() => self.skipWaiting())
   );
 });
 
