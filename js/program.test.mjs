@@ -77,7 +77,6 @@ test("restCategoryFor: the global compound list applies by exercise name, no per
     [5, "Close-grip bench press"],
     [5, "Machine chest press"],
     [3, "RDL"],
-    [6, "Hip thrust"],
     [6, "Bulgarian split squat"],
   ];
   for (const [dayIndex, name] of compoundExamples) {
@@ -247,7 +246,6 @@ test("Push B (5): full exercise list in order", () => {
 test("Legs B (6): full exercise list in order", () => {
   const names = dayInfo(6).accessories.map((a) => a.name);
   assert.deepEqual(names, [
-    "Hip thrust",
     "Bulgarian split squat",
     "Machine leg curl",
     "Leg extension",
@@ -256,8 +254,7 @@ test("Legs B (6): full exercise list in order", () => {
     "Lateral raise",
     "Cable crunch",
   ]);
-  assert.equal(accessoryDefFor(6, "Hip thrust").sets, 3);
-  assert.equal(accessoryDefFor(6, "Hip thrust").repsLabel, "8–12");
+  assert.equal(accessoryDefFor(6, "Hip thrust"), null, "Hip thrust was removed from Deadlift day");
   assert.equal(accessoryDefFor(6, "Bulgarian split squat").sets, 3);
   assert.equal(accessoryDefFor(6, "Bulgarian split squat").repsLabel, "8–12/leg");
   assert.equal(accessoryDefFor(6, "Machine leg curl").sets, 3);

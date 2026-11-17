@@ -129,7 +129,6 @@ export const DAYS = {
     supplemental: "backoff",
     supplementalConfig: { sets: 2, targetReps: 5 },
     accessories: [
-      { name: "Hip thrust", sets: 3, repsLabel: "8–12" },
       { name: "Bulgarian split squat", sets: 3, repsLabel: "8–12/leg" },
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
       { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },
