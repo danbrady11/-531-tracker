@@ -20,7 +20,7 @@ function defaultState() {
       // Deadlift's own supplemental percentage — "Back-off", not BBB (no BBB
       // on Deadlift day at all). Editable separately from bbbPercentage.
       deadliftBackoffPercentage: 0.65,
-      tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5, trapBarDeadlift: 10 },
+      tmIncrements: { squat: 10, deadlift: 10, bench: 5, press: 5 },
       // Rest between sets, by exercise category — editable in Settings so a
       // duration change never needs a code change. "superset" is the rest
       // taken only after the "b" exercise of a superset pair, since there's
@@ -39,10 +39,6 @@ function defaultState() {
       bench: { currentValue: 115, updatedAt: null },
       deadlift: { currentValue: 155, updatedAt: null },
       press: { currentValue: 75, updatedAt: null },
-      // Deliberately NOT defaulted from the old conventional deadlift TM —
-      // trap bar deadlift is a different lift with a different max, and
-      // app.js prompts for a real starting number the first time this loads.
-      trapBarDeadlift: { currentValue: 0, updatedAt: null },
     },
     // deloadOverride lets the current cycle's deload status be toggled by
     // hand from the main screen; null means "use the settings-based rule".
@@ -303,6 +299,12 @@ export function migrate(state) {
   // Superseded by restTimerSec's per-category durations.
   delete merged.settings.restTimerMainSec;
   delete merged.settings.restTimerIsolationSec;
+  // Trap bar deadlift was removed entirely — no day uses it as a lift, so
+  // its TM/increment have nothing left to drive. Completed session logs
+  // that recorded it (from the brief period it was live) are untouched;
+  // this only drops the forward-looking TM/settings bookkeeping.
+  delete merged.settings.tmIncrements.trapBarDeadlift;
+  delete merged.trainingMaxes.trapBarDeadlift;
   for (const lift of LIFTS) {
     merged.trainingMaxes[lift] = { ...base.trainingMaxes[lift], ...(state.trainingMaxes?.[lift] || {}) };
   }

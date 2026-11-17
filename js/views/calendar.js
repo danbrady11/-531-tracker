@@ -20,9 +20,9 @@ function dateKey(y, m, d) {
 function colorVarForLog(log) {
   const day = dayInfo(log.dayIndex);
   // Prefer the lift the session itself actually recorded over the day
-  // slot's current lift — a day's main lift can change (e.g. Day 6 moving
-  // from conventional to trap bar deadlift) without rewriting old logs, so
-  // this keeps old sessions colored/labeled for what was really performed.
+  // slot's current lift — a day's main lift can change without rewriting
+  // old logs, so this keeps old sessions colored/labeled for what was
+  // really performed.
   const lift = log.lift || day.lift;
   if (lift) return LIFT_META[lift]?.colorVar || NON_LIFT_COLOR_VAR;
   return NON_LIFT_DAY_META[day.kind]?.colorVar || NON_LIFT_COLOR_VAR;

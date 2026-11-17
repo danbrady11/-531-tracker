@@ -1,27 +1,14 @@
 // Shared display metadata for the main lifts, used by History's chart legend,
 // the cycle-completion TM prompt, and the Calendar's day-color coding.
-// "trapBarDeadlift" is kept (even though no day uses it anymore — Day 6 was
-// briefly switched to it, then reverted to conventional deadlift) so that
-// brief stretch of history still shows correctly in Settings and Calendar
-// instead of disappearing, the same reasoning "deadlift" itself was kept for
-// during the period trap bar was active.
 export const LIFT_META = {
   deadlift: { label: "Deadlift", colorVar: "--danger" },
   squat: { label: "Squat", colorVar: "--accent" },
   bench: { label: "Bench", colorVar: "--success" },
   press: { label: "Press", colorVar: "--amrap" },
-  trapBarDeadlift: { label: "Trap Bar Deadlift", colorVar: "--pink" },
 };
-export const LIFT_ORDER = ["deadlift", "squat", "bench", "press", "trapBarDeadlift"];
+export const LIFT_ORDER = ["deadlift", "squat", "bench", "press"];
 
-// Excludes trapBarDeadlift: its brief, discontinuous run isn't worth a
-// permanent line/legend entry in summary views — History's combined
-// 1RM/volume chart and the Calendar's legend — unlike LIFT_ORDER's other use
-// (Lift Status on the splash screen), where surfacing it if it has history is
-// still useful. Calendar dots for an actual logged trap bar day still render
-// in its own color regardless (colorVarForLog reads a log's own lift
-// directly, not this list) — only the legend entry is dropped.
-export const CHART_LIFT_ORDER = LIFT_ORDER.filter((lift) => lift !== "trapBarDeadlift");
+export const CHART_LIFT_ORDER = LIFT_ORDER;
 
 // The two non-lift day kinds (Recovery, Accessory) get their own colors too,
 // so they're distinguishable from each other on the Calendar instead of both

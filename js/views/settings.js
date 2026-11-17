@@ -2,7 +2,7 @@ import { LIFTS } from "../calc.js";
 import { effectiveWeekCount } from "../state.js";
 import { DAY_COUNT, dayInfo } from "../program.js";
 
-const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press", trapBarDeadlift: "Trap Bar Deadlift" };
+const LIFT_LABELS = { squat: "Squat", bench: "Bench", deadlift: "Deadlift", press: "Press" };
 
 const REST_TIMER_CATEGORIES = [
   { key: "main", label: "Main lift" },

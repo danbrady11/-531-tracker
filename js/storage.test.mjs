@@ -117,20 +117,17 @@ test("migrate falls back to an empty array when rehabEntries isn't an array", ()
   assert.deepEqual(migrated.rehabEntries, []);
 });
 
-test("migrate defaults trapBarDeadlift TM to 0 for an existing user, not copied from deadlift", () => {
-  const migrated = migrate({ trainingMaxes: { deadlift: { currentValue: 225, updatedAt: "2026-01-01" } } });
-  assert.equal(migrated.trainingMaxes.deadlift.currentValue, 225);
-  assert.equal(migrated.trainingMaxes.trapBarDeadlift.currentValue, 0);
-});
-
-test("migrate preserves an already-set trapBarDeadlift TM (e.g. after the one-time prompt)", () => {
+test("migrate strips trapBarDeadlift entirely — the feature was removed, leaving only completed history (if any) untouched", () => {
   const migrated = migrate({
     trainingMaxes: {
       deadlift: { currentValue: 225, updatedAt: "2026-01-01" },
       trapBarDeadlift: { currentValue: 185, updatedAt: "2026-02-01" },
     },
+    settings: { tmIncrements: { trapBarDeadlift: 10 } },
   });
-  assert.equal(migrated.trainingMaxes.trapBarDeadlift.currentValue, 185);
+  assert.equal(migrated.trainingMaxes.deadlift.currentValue, 225);
+  assert.equal("trapBarDeadlift" in migrated.trainingMaxes, false);
+  assert.equal("trapBarDeadlift" in migrated.settings.tmIncrements, false);
 });
 
 test("migrate renames 'Nordic curl' history to 'Swiss ball leg curl'", () => {

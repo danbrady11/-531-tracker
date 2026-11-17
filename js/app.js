@@ -328,53 +328,6 @@ function promptCycleCompletion() {
   );
 }
 
-// One-time prompt, shown the first time this update loads: Day 6 switched
-// from conventional deadlift to trap bar deadlift, a different lift with a
-// different max, so trainingMaxes.trapBarDeadlift deliberately starts at 0
-// instead of copying the old deadlift number — this collects a real one
-// instead of leaving it silently at 0 until the user happens into Settings.
-function promptTrapBarTmIfNeeded() {
-  if (state._trapBarTmPromptedV1) return;
-
-  // Only marked prompted once the user actually dismisses it (below), not
-  // here — the service worker's auto-reload-on-update (see index.html) can
-  // fire moments after this same load, which would otherwise burn this
-  // one-time flag before anyone saw the modal.
-  const oldDeadliftTm = state.trainingMaxes.deadlift.currentValue;
-  showModal(
-    `<h2>Set your Trap Bar Deadlift max</h2>
-     <p class="set-meta">Day 6 now uses trap bar deadlift instead of conventional deadlift. Since it's a different lift, enter a starting training max rather than carrying over your old conventional deadlift TM (${oldDeadliftTm} lb, still kept for its own history).</p>
-     <div class="field">
-       <label>Trap Bar Deadlift training max (lb)</label>
-       <input class="set-input" style="width:100%" type="number" step="5" id="trapbar-tm-input" placeholder="e.g. ${oldDeadliftTm}" />
-     </div>
-     <div class="btn-row">
-       <button class="btn btn-primary btn-block" id="trapbar-tm-save">Save</button>
-     </div>
-     <div class="btn-row">
-       <button class="btn btn-block" id="trapbar-tm-skip">I'll set it later in Settings</button>
-     </div>`,
-    (root) => {
-      root.querySelector("#trapbar-tm-save").addEventListener("click", () => {
-        const value = Number(root.querySelector("#trapbar-tm-input").value);
-        if (value > 0) {
-          state.trainingMaxes.trapBarDeadlift = { currentValue: value, updatedAt: new Date().toISOString() };
-        }
-        state._trapBarTmPromptedV1 = true;
-        persist();
-        closeModal();
-        renderCurrentView();
-      });
-      root.querySelector("#trapbar-tm-skip").addEventListener("click", () => {
-        state._trapBarTmPromptedV1 = true;
-        persist();
-        closeModal();
-        renderCurrentView();
-      });
-    }
-  );
-}
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -1021,4 +974,3 @@ subscribeRestTimer(({ remainingMs, label }) => {
 applyTheme();
 renderCurrentView();
 initCloudSync();
-promptTrapBarTmIfNeeded();

@@ -3,8 +3,8 @@ import { nextTrainingMax, epleyE1RM, LIFTS } from "./calc.js";
 
 // The four main lifts that gate 5/3/1 week advancement — Pull A/B have no
 // main lift and never count toward this, regardless of how many times
-// they're completed. Deliberately its own list rather than calc.js's LIFTS
-// (which also includes the long-retired trapBarDeadlift).
+// they're completed. Deliberately its own list rather than calc.js's LIFTS,
+// so the two stay independent even though their contents currently match.
 export const WEEK_ADVANCE_LIFTS = ["bench", "squat", "press", "deadlift"];
 
 /**
