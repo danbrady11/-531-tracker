@@ -133,9 +133,9 @@ export const DAYS = {
     supplementalConfig: { sets: 2, targetReps: 5 },
     accessories: [
       { name: "Bulgarian split squat", sets: 3, repsLabel: "8–12/leg", restSec: 120 },
-      { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
-      { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },
-      { name: "Seated calf raise", sets: 4, repsLabel: "12–20" },
+      { name: "Machine leg curl", sets: 3, repsLabel: "10–12", restSec: 90 },
+      { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly.", restSec: 90 },
+      { name: "Seated calf raise", sets: 4, repsLabel: "12–20", restSec: 90 },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Cable crunch", sets: 3, repsLabel: "10–15", variants: ["Cable crunch", "Machine crunch"] },
