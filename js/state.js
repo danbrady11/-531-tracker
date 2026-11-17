@@ -120,6 +120,25 @@ export function progressTrainingMaxes(trainingMaxes, tmIncrements, now = new Dat
 }
 
 /**
+ * Merges a freshly rebuilt set of sets (recomputed for a new training max,
+ * via the same builder used to create the session originally — so BBB's
+ * bench/squat weight floor etc. still apply correctly) onto the existing
+ * session's sets, index by index. A set already marked completed is kept
+ * exactly as logged — it's a record of what was actually lifted, not
+ * something a later TM correction should rewrite. An unlogged set takes the
+ * new weight/percentage but keeps whatever the user had already typed into
+ * it (reps on a supplemental set, actualReps on a main set), if anything.
+ */
+export function mergeRecomputedSets(oldSets, newSets) {
+  return newSets.map((newSet, i) => {
+    const old = oldSets[i];
+    if (!old) return { ...newSet, completed: false };
+    if (old.completed) return old;
+    return { ...newSet, reps: old.reps, actualReps: old.actualReps, completed: false };
+  });
+}
+
+/**
  * Most recent logged value for a given exercise+set index, for prefill.
  * Falls back to any set of that exercise from the most recent session that logged it,
  * so a changed set count doesn't blank out prefill entirely.

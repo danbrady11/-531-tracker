@@ -1,6 +1,6 @@
 import { loadState, saveState, exportStateJSON, importStateJSON, migrate } from "./storage.js";
 import { mainSetsForWeek, fslSets, bbbSets, LIFTS } from "./calc.js";
-import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount } from "./state.js";
+import { advanceCycle, progressTrainingMaxes, newSessionLog, lastAccessoryLog, sessionsByDate, deriveCycleStateFromHistory, effectiveWeekCount, mergeRecomputedSets } from "./state.js";
 import { dayInfo, DAY_COUNT, accessoryDefFor } from "./program.js";
 import { LIFT_META } from "./lift-meta.js";
 import { renderToday } from "./views/today.js";
@@ -761,6 +761,22 @@ const actions = {
   },
   setTrainingMax(lift, value) {
     state.trainingMaxes[lift] = { currentValue: value, updatedAt: new Date().toISOString() };
+    // Bring the in-progress session's still-unlogged weights in line with
+    // the correction immediately, rather than leaving them stale until the
+    // next day builds a fresh session off the new TM. Rebuilds through the
+    // same builders used at session creation (not just percentage * TM)
+    // so BBB's bench/squat weight floor and similar rules still apply.
+    const session = state.currentSession;
+    if (session && !session.completed && session.lift === lift) {
+      const day = dayInfo(session.dayIndex);
+      session.mainSets = mergeRecomputedSets(session.mainSets, mainSetsForWeek(value, session.weekIndex, state.settings.roundingIncrement));
+      if (day.supplemental) {
+        session.supplementalSets = mergeRecomputedSets(
+          session.supplementalSets,
+          supplementalSetsForType(session.supplementalType || day.supplemental, day, session.weekIndex)
+        );
+      }
+    }
     persist();
     renderCurrentView();
   },

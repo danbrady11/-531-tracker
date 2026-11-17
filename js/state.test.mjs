@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, rehabMinutesByModality } from "./state.js";
+import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, rehabMinutesByModality, mergeRecomputedSets } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -360,4 +360,32 @@ test("rehabMinutesByModality: sums minutes per modality within the trailing wind
 
 test("rehabMinutesByModality: returns an empty object when there are no entries in range", () => {
   assert.deepEqual(rehabMinutesByModality([], 7), {});
+});
+
+test("mergeRecomputedSets: takes the new weight/percentage for an unlogged set, keeping its typed-but-unsubmitted reps", () => {
+  const oldSets = [{ percentage: 0.65, weight: 100, targetReps: 5, actualReps: null, isAmrap: false, completed: false }];
+  const newSets = [{ percentage: 0.65, weight: 110, targetReps: 5, isAmrap: false }];
+  const merged = mergeRecomputedSets(oldSets, newSets);
+  assert.deepEqual(merged, [{ percentage: 0.65, weight: 110, targetReps: 5, isAmrap: false, actualReps: null, reps: undefined, completed: false }]);
+});
+
+test("mergeRecomputedSets: leaves an already-completed set entirely untouched, ignoring the new weight", () => {
+  const oldSets = [{ percentage: 0.65, weight: 100, targetReps: 5, actualReps: 5, isAmrap: false, completed: true }];
+  const newSets = [{ percentage: 0.65, weight: 110, targetReps: 5, isAmrap: false }];
+  const merged = mergeRecomputedSets(oldSets, newSets);
+  assert.deepEqual(merged[0], oldSets[0]);
+});
+
+test("mergeRecomputedSets: preserves a supplemental set's typed reps across the recompute", () => {
+  const oldSets = [{ type: "bbb", percentage: 0.5, weight: 60, targetReps: 10, reps: 8, completed: false }];
+  const newSets = [{ type: "bbb", percentage: 0.5, weight: 70, targetReps: 10, reps: null, completed: false }];
+  const merged = mergeRecomputedSets(oldSets, newSets);
+  assert.equal(merged[0].weight, 70);
+  assert.equal(merged[0].reps, 8);
+  assert.equal(merged[0].completed, false);
+});
+
+test("mergeRecomputedSets: falls back to the new set as-is when there's no corresponding old set (array grew)", () => {
+  const merged = mergeRecomputedSets([], [{ percentage: 0.5, weight: 70, targetReps: 10 }]);
+  assert.deepEqual(merged, [{ percentage: 0.5, weight: 70, targetReps: 10, completed: false }]);
 });
