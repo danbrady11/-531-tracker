@@ -263,6 +263,8 @@ function deriveCycleStateForPplRestructure(sessionLogs, cycleState) {
 const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
   { dayIndex: 1, exerciseName: "Machine crunch", sets: 3 },
   { dayIndex: 4, exerciseName: "Machine crunch", sets: 3 },
+  { dayIndex: 3, exerciseName: "Reverse pec deck / cable reverse fly", sets: 3 },
+  { dayIndex: 6, exerciseName: "Reverse pec deck / cable reverse fly", sets: 3 },
 ];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {

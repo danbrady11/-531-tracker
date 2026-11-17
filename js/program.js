@@ -52,7 +52,7 @@ export const DAYS = {
       { name: "Reverse pec deck / cable reverse fly", sets: 4, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Curls", sets: 4, repsLabel: "10–15" },
-      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis." },
+      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Keep hips still; curl the ribs toward the pelvis.", variants: ["Machine crunch", "Cable crunch"] },
     ],
   },
   2: {
@@ -65,7 +65,7 @@ export const DAYS = {
     supplementalConfig: { sets: 3, targetReps: 10 },
     supplementalAlt: { type: "dbFlatPress", label: "DB flat press", sets: 3, targetReps: 10 },
     accessories: [
-      { name: "Incline barbell press", sets: 3, repsLabel: "8–10" },
+      { name: "Incline barbell press", sets: 3, repsLabel: "8–10", variants: ["Incline barbell press", "Incline chest press machine"] },
       { name: "Dips (bodyweight)", sets: 3, repsLabel: "" },
       { name: "Cable fly (mid-height)", sets: 3, repsLabel: "12–15" },
       { name: "Cable rope overhead extension", sets: 3, repsLabel: "10–15", cue: "facing away from the stack, slight forward lean, rope split at the top" },
@@ -83,8 +83,9 @@ export const DAYS = {
       { name: "Leg extension", sets: 4, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
       { name: "Standing calf raise", sets: 4, repsLabel: "12–15" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
-      { name: "Cable crunch", sets: 3, repsLabel: "10–15" },
+      { name: "Cable crunch", sets: 3, repsLabel: "10–15", variants: ["Cable crunch", "Machine crunch"] },
     ],
   },
   4: {
@@ -101,7 +102,7 @@ export const DAYS = {
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Hammer curls", sets: 3, repsLabel: "10–15" },
       { name: "Incline DB curl", sets: 3, repsLabel: "10–12" },
-      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis." },
+      { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Keep hips still; curl the ribs toward the pelvis.", variants: ["Machine crunch", "Cable crunch"] },
     ],
   },
   5: {
@@ -133,8 +134,9 @@ export const DAYS = {
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
       { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },
       { name: "Seated calf raise", sets: 4, repsLabel: "12–20" },
+      { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
-      { name: "Cable crunch", sets: 3, repsLabel: "10–15" },
+      { name: "Cable crunch", sets: 3, repsLabel: "10–15", variants: ["Cable crunch", "Machine crunch"] },
     ],
   },
 };

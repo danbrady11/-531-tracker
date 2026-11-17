@@ -140,14 +140,17 @@ test("Pull A (1): full exercise list in order", () => {
   const crunch = accessoryDefFor(1, "Machine crunch");
   assert.equal(crunch.sets, 3);
   assert.equal(crunch.repsLabel, "10–15");
-  assert.equal(crunch.cue, "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis.");
+  assert.equal(crunch.cue, "Keep hips still; curl the ribs toward the pelvis.");
+  assert.deepEqual(crunch.variants, ["Machine crunch", "Cable crunch"]);
 });
 
 test("Push A (2): full exercise list in order", () => {
   const names = dayInfo(2).accessories.map((a) => a.name);
   assert.deepEqual(names, ["Incline barbell press", "Dips (bodyweight)", "Cable fly (mid-height)", "Cable rope overhead extension"]);
-  assert.equal(accessoryDefFor(2, "Incline barbell press").sets, 3);
-  assert.equal(accessoryDefFor(2, "Incline barbell press").repsLabel, "8–10");
+  const inclinePress = accessoryDefFor(2, "Incline barbell press");
+  assert.equal(inclinePress.sets, 3);
+  assert.equal(inclinePress.repsLabel, "8–10");
+  assert.deepEqual(inclinePress.variants, ["Incline barbell press", "Incline chest press machine"]);
   const dips = accessoryDefFor(2, "Dips (bodyweight)");
   assert.equal(dips.sets, 3);
   assert.equal(dips.repsLabel, "", "no rep target — logged freely, like Chin-ups' old AMRAP style");
@@ -161,7 +164,15 @@ test("Push A (2): full exercise list in order", () => {
 
 test("Legs A (3): full exercise list in order", () => {
   const names = dayInfo(3).accessories.map((a) => a.name);
-  assert.deepEqual(names, ["RDL", "Leg extension", "Machine leg curl", "Standing calf raise", "Lateral raise", "Cable crunch"]);
+  assert.deepEqual(names, [
+    "RDL",
+    "Leg extension",
+    "Machine leg curl",
+    "Standing calf raise",
+    "Reverse pec deck / cable reverse fly",
+    "Lateral raise",
+    "Cable crunch",
+  ]);
   assert.equal(accessoryDefFor(3, "RDL").sets, 3);
   assert.equal(accessoryDefFor(3, "RDL").repsLabel, "8–10");
   const legExt = accessoryDefFor(3, "Leg extension");
@@ -172,10 +183,14 @@ test("Legs A (3): full exercise list in order", () => {
   assert.equal(accessoryDefFor(3, "Machine leg curl").repsLabel, "10–12");
   assert.equal(accessoryDefFor(3, "Standing calf raise").sets, 4);
   assert.equal(accessoryDefFor(3, "Standing calf raise").repsLabel, "12–15");
+  assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly").sets, 3);
+  assert.equal(accessoryDefFor(3, "Reverse pec deck / cable reverse fly").repsLabel, "15–20");
   assert.equal(accessoryDefFor(3, "Lateral raise").sets, 4);
   assert.equal(accessoryDefFor(3, "Lateral raise").repsLabel, "12–20");
-  assert.equal(accessoryDefFor(3, "Cable crunch").sets, 3);
-  assert.equal(accessoryDefFor(3, "Cable crunch").repsLabel, "10–15");
+  const crunch = accessoryDefFor(3, "Cable crunch");
+  assert.equal(crunch.sets, 3);
+  assert.equal(crunch.repsLabel, "10–15");
+  assert.deepEqual(crunch.variants, ["Cable crunch", "Machine crunch"]);
 });
 
 test("Pull B (4): full exercise list in order", () => {
@@ -211,7 +226,8 @@ test("Pull B (4): full exercise list in order", () => {
   const crunch = accessoryDefFor(4, "Machine crunch");
   assert.equal(crunch.sets, 3);
   assert.equal(crunch.repsLabel, "10–15");
-  assert.equal(crunch.cue, "Weighted crunch if no machine. Keep hips still; curl the ribs toward the pelvis.");
+  assert.equal(crunch.cue, "Keep hips still; curl the ribs toward the pelvis.");
+  assert.deepEqual(crunch.variants, ["Machine crunch", "Cable crunch"]);
 });
 
 test("Push B (5): full exercise list in order", () => {
@@ -230,7 +246,16 @@ test("Push B (5): full exercise list in order", () => {
 
 test("Legs B (6): full exercise list in order", () => {
   const names = dayInfo(6).accessories.map((a) => a.name);
-  assert.deepEqual(names, ["Hip thrust", "Bulgarian split squat", "Machine leg curl", "Leg extension", "Seated calf raise", "Lateral raise", "Cable crunch"]);
+  assert.deepEqual(names, [
+    "Hip thrust",
+    "Bulgarian split squat",
+    "Machine leg curl",
+    "Leg extension",
+    "Seated calf raise",
+    "Reverse pec deck / cable reverse fly",
+    "Lateral raise",
+    "Cable crunch",
+  ]);
   assert.equal(accessoryDefFor(6, "Hip thrust").sets, 3);
   assert.equal(accessoryDefFor(6, "Hip thrust").repsLabel, "8–12");
   assert.equal(accessoryDefFor(6, "Bulgarian split squat").sets, 3);
@@ -243,10 +268,36 @@ test("Legs B (6): full exercise list in order", () => {
   assert.equal(legExt.cue, "Pause at the top, lower slowly.");
   assert.equal(accessoryDefFor(6, "Seated calf raise").sets, 4);
   assert.equal(accessoryDefFor(6, "Seated calf raise").repsLabel, "12–20");
+  assert.equal(accessoryDefFor(6, "Reverse pec deck / cable reverse fly").sets, 3);
+  assert.equal(accessoryDefFor(6, "Reverse pec deck / cable reverse fly").repsLabel, "15–20");
   assert.equal(accessoryDefFor(6, "Lateral raise").sets, 4);
   assert.equal(accessoryDefFor(6, "Lateral raise").repsLabel, "12–20");
-  assert.equal(accessoryDefFor(6, "Cable crunch").sets, 3);
-  assert.equal(accessoryDefFor(6, "Cable crunch").repsLabel, "10–15");
+  const crunch = accessoryDefFor(6, "Cable crunch");
+  assert.equal(crunch.sets, 3);
+  assert.equal(crunch.repsLabel, "10–15");
+  assert.deepEqual(crunch.variants, ["Cable crunch", "Machine crunch"]);
+});
+
+test("every day with Lateral raise also has Reverse pec deck / cable reverse fly", () => {
+  for (const dayIndex of [1, 2, 3, 4, 5, 6]) {
+    const day = dayInfo(dayIndex);
+    const hasLateralRaise = day.accessories.some((a) => a.name === "Lateral raise");
+    if (!hasLateralRaise) continue;
+    assert.ok(
+      day.accessories.some((a) => a.name === "Reverse pec deck / cable reverse fly"),
+      `day ${dayIndex} has Lateral raise but no Reverse pec deck / cable reverse fly`
+    );
+  }
+});
+
+test("every Cable crunch or Machine crunch accessory offers the other as a variant", () => {
+  for (const dayIndex of [1, 2, 3, 4, 5, 6]) {
+    for (const accessory of dayInfo(dayIndex).accessories) {
+      if (accessory.name !== "Cable crunch" && accessory.name !== "Machine crunch") continue;
+      assert.ok(accessory.variants?.includes("Cable crunch"), `day ${dayIndex} ${accessory.name}`);
+      assert.ok(accessory.variants?.includes("Machine crunch"), `day ${dayIndex} ${accessory.name}`);
+    }
+  }
 });
 
 test("legacy slot 9 holds the frozen Recovery day (moved from the old slot 6, now live as Legs B)", () => {

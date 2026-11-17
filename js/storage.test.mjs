@@ -749,3 +749,34 @@ test("migrate's Machine crunch backfill is idempotent — doesn't duplicate once
   const migrated = migrate(state);
   assert.equal(migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Machine crunch").length, 3);
 });
+
+test("migrate backfills Reverse pec deck / cable reverse fly onto an in-progress Squat or Deadlift session, prefilling from its own prior history", () => {
+  for (const dayIndex of [3, 6]) {
+    const state = {
+      ...ALL_MIGRATIONS_DONE,
+      sessionLogs: [sessionWith([{ exerciseName: "Reverse pec deck / cable reverse fly", setIndex: 0, weight: 30, reps: 18, completed: true }])],
+      currentSession: { ...sessionWith([{ exerciseName: "Lateral raise", setIndex: 0, weight: 20, reps: 15, completed: true }]), dayIndex },
+    };
+    const migrated = migrate(state);
+    const flySets = migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Reverse pec deck / cable reverse fly");
+    assert.equal(flySets.length, 3, `dayIndex ${dayIndex}`);
+    assert.deepEqual(flySets[0], { exerciseName: "Reverse pec deck / cable reverse fly", setIndex: 0, weight: 30, reps: 18, completed: false }, `dayIndex ${dayIndex}`);
+  }
+});
+
+test("migrate's Reverse pec deck / cable reverse fly backfill is idempotent — doesn't duplicate once already present", () => {
+  const state = {
+    ...ALL_MIGRATIONS_DONE,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([
+        { exerciseName: "Reverse pec deck / cable reverse fly", setIndex: 0, weight: 30, reps: 18, completed: true },
+        { exerciseName: "Reverse pec deck / cable reverse fly", setIndex: 1, weight: 30, reps: 18, completed: false },
+        { exerciseName: "Reverse pec deck / cable reverse fly", setIndex: 2, weight: null, reps: null, completed: false },
+      ]),
+      dayIndex: 3,
+    },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Reverse pec deck / cable reverse fly").length, 3);
+});
