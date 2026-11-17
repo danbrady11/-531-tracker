@@ -137,7 +137,10 @@ function checkableAccessoryRow(accessory, session) {
  * unless the exercise is part of a superset pair — the "a" exercise gets no
  * rest control at all (advance straight to "b"), and "b" gets no manual
  * button either, since its rest starts automatically the moment a set is
- * logged (see actions.toggleAccessorySet in app.js).
+ * logged (see actions.toggleAccessorySet in app.js). An accessory with its
+ * own fixed `restSec` (e.g. Bulgarian split squat's 2:00) uses that exact
+ * duration instead of its category's — a one-off override, not editable via
+ * Settings' rest-timer categories like the rest of restTimerSec is.
  */
 function accessoryRestControl(accessory, activeName, restTimerSec) {
   if (accessory.supersetRole === "a") {
@@ -146,7 +149,7 @@ function accessoryRestControl(accessory, activeName, restTimerSec) {
   if (accessory.supersetRole === "b") {
     return `<div class="set-meta">Superset — ${formatSec(restTimerSec.superset)} rest starts automatically once a set is logged.</div>`;
   }
-  return restButtonHtml(restTimerSec[restCategoryFor(accessory)], `${activeName} rest`);
+  return restButtonHtml(accessory.restSec ?? restTimerSec[restCategoryFor(accessory)], `${activeName} rest`);
 }
 
 /** Which of an accessory's variants (e.g. standing/seated calf raise) the current session is actually logging — the day's default until switched. */

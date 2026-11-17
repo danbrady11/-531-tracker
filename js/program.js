@@ -13,7 +13,10 @@
 // COMPOUND_EXERCISE_NAMES below gets "compound"; everything else defaults to
 // "isolation" — see restCategoryFor(). An explicit `restCategory` on an
 // accessory (only ever set on frozen LEGACY_DAYS entries below, from before
-// this global list existed) always wins over both.
+// this global list existed) always wins over both. Separately, an accessory
+// can set its own fixed `restSec` (e.g. Bulgarian split squat's 2:00) to
+// override the computed category's duration entirely with a literal one —
+// see accessoryRestControl in today.js.
 export const DEFAULT_REST_CATEGORY = "isolation";
 
 // The authoritative compound list for the PPL program: pull-ups, chin-ups,
@@ -129,7 +132,7 @@ export const DAYS = {
     supplemental: "backoff",
     supplementalConfig: { sets: 2, targetReps: 5 },
     accessories: [
-      { name: "Bulgarian split squat", sets: 3, repsLabel: "8–12/leg" },
+      { name: "Bulgarian split squat", sets: 3, repsLabel: "8–12/leg", restSec: 120 },
       { name: "Machine leg curl", sets: 3, repsLabel: "10–12" },
       { name: "Leg extension", sets: 3, repsLabel: "12–15", cue: "Pause at the top, lower slowly." },
       { name: "Seated calf raise", sets: 4, repsLabel: "12–20" },

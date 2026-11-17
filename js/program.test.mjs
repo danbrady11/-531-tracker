@@ -255,8 +255,10 @@ test("Legs B (6): full exercise list in order", () => {
     "Cable crunch",
   ]);
   assert.equal(accessoryDefFor(6, "Hip thrust"), null, "Hip thrust was removed from Deadlift day");
-  assert.equal(accessoryDefFor(6, "Bulgarian split squat").sets, 3);
-  assert.equal(accessoryDefFor(6, "Bulgarian split squat").repsLabel, "8–12/leg");
+  const bulgarianSplitSquat = accessoryDefFor(6, "Bulgarian split squat");
+  assert.equal(bulgarianSplitSquat.sets, 3);
+  assert.equal(bulgarianSplitSquat.repsLabel, "8–12/leg");
+  assert.equal(bulgarianSplitSquat.restSec, 120, "fixed 2:00 rest, overriding its compound-category default");
   assert.equal(accessoryDefFor(6, "Machine leg curl").sets, 3);
   assert.equal(accessoryDefFor(6, "Machine leg curl").repsLabel, "10–12");
   const legExt = accessoryDefFor(6, "Leg extension");
