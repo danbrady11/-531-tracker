@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, rehabMinutesByModality, mergeRecomputedSets } from "./state.js";
+import { advanceCycle, advanceWeek, effectiveWeekCount, newSessionLog, deriveCycleStateFromHistory, lastCompletedByLift, parseBulkWeightEntries, accessoryRepVolumeSeries, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, rehabMinutesByModality, mergeRecomputedSets, lastMetconLog, metconHistory } from "./state.js";
 
 const deloadEveryCycle = { deloadOnEvenCyclesOnly: false };
 const deloadEvenOnly = { deloadOnEvenCyclesOnly: true };
@@ -170,6 +170,17 @@ test("newSessionLog: an accessory with variants logs under its default (first) v
   );
   assert.equal(session.accessorySets.filter((s) => s.exerciseName === "Standing calf raise").length, 5);
   assert.equal(session.accessorySets.some((s) => s.exerciseName === "Calf raise"), false);
+});
+
+test("newSessionLog: a metcon-kind accessory gets exactly one entry carrying calories/kbWeight, not weight/reps", () => {
+  const session = newSessionLog(
+    { dayIndex: 1, weekIndex: 1, cycleNumber: 1 },
+    [], [],
+    [{ name: "Metcon: KB swing / Assault bike EMOM", kind: "metcon", description: "20-min EMOM" }]
+  );
+  const entries = session.accessorySets.filter((s) => s.exerciseName === "Metcon: KB swing / Assault bike EMOM");
+  assert.equal(entries.length, 1);
+  assert.deepEqual(entries[0], { exerciseName: "Metcon: KB swing / Assault bike EMOM", setIndex: 0, calories: null, kbWeight: null, completed: false });
 });
 
 function logAt(dayIndex, weekIndex, cycleNumber, date, completed) {
@@ -388,4 +399,46 @@ test("mergeRecomputedSets: preserves a supplemental set's typed reps across the 
 test("mergeRecomputedSets: falls back to the new set as-is when there's no corresponding old set (array grew)", () => {
   const merged = mergeRecomputedSets([], [{ percentage: 0.5, weight: 70, targetReps: 10 }]);
   assert.deepEqual(merged, [{ percentage: 0.5, weight: 70, targetReps: 10, completed: false }]);
+});
+
+function metconLogAt(date, calories, kbWeight, completed = true) {
+  return {
+    id: date,
+    date,
+    dayIndex: 1,
+    weekIndex: 1,
+    cycleNumber: 1,
+    lift: null,
+    completed,
+    mainSets: [],
+    supplementalSets: [],
+    accessorySets: [{ exerciseName: "Metcon: KB swing / Assault bike EMOM", setIndex: 0, calories, kbWeight, completed: calories != null }],
+    notes: "",
+  };
+}
+
+test("lastMetconLog: returns the most recently logged calories/kbWeight for the exercise", () => {
+  const logs = [metconLogAt("2026-11-01T00:00:00.000Z", 180, 35), metconLogAt("2026-11-08T00:00:00.000Z", 210, 40)];
+  assert.deepEqual(lastMetconLog(logs, "Metcon: KB swing / Assault bike EMOM"), { calories: 210, kbWeight: 40 });
+});
+
+test("lastMetconLog: skips sessions where calories was never logged, and returns null kbWeight if it wasn't logged", () => {
+  const logs = [metconLogAt("2026-11-01T00:00:00.000Z", 180, null), metconLogAt("2026-11-08T00:00:00.000Z", null, 40, false)];
+  assert.deepEqual(lastMetconLog(logs, "Metcon: KB swing / Assault bike EMOM"), { calories: 180, kbWeight: null });
+});
+
+test("lastMetconLog: returns null when there's no history for the exercise", () => {
+  assert.equal(lastMetconLog([], "Metcon: KB swing / Assault bike EMOM"), null);
+});
+
+test("metconHistory: returns chronological entries for completed sessions only", () => {
+  const logs = [
+    metconLogAt("2026-11-08T00:00:00.000Z", 210, 40),
+    metconLogAt("2026-11-01T00:00:00.000Z", 180, 35),
+    metconLogAt("2026-11-15T00:00:00.000Z", null, null, false), // not completed / no calories logged
+  ];
+  assert.deepEqual(metconHistory(logs, "Metcon: KB swing / Assault bike EMOM"), [
+    { date: "2026-11-01T00:00:00.000Z", calories: 180, kbWeight: 35 },
+    { date: "2026-11-08T00:00:00.000Z", calories: 210, kbWeight: 40 },
+  ]);
 });

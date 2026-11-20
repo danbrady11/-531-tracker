@@ -8,7 +8,7 @@ import { renderSettings } from "./views/settings.js";
 import { renderHistory } from "./views/history.js";
 import { renderCalendar } from "./views/calendar.js";
 import { renderRehab } from "./views/rehab.js";
-import { startRestTimer, cancelRestTimer, subscribeRestTimer, formatMs } from "./timer.js";
+import { startRestTimer, cancelRestTimer, subscribeRestTimer, formatMs, startEmomTimer, cancelEmomTimer, subscribeEmomTimer } from "./timer.js";
 import {
   getSyncCode,
   setSyncCodeLocally,
@@ -639,6 +639,22 @@ const actions = {
     entry[field] = value;
     persist();
   },
+  // A "metcon"-kind accessory (the KB swing/assault bike EMOM) has no
+  // sets/completion checkbox of its own — it's done once calories is
+  // entered, so completed is derived here rather than toggled manually.
+  setMetconValue(exerciseName, field, value) {
+    const entry = state.currentSession.accessorySets.find((s) => s.exerciseName === exerciseName && s.setIndex === 0);
+    entry[field] = value;
+    entry.completed = entry.calories != null && entry.calories > 0;
+    persist();
+    renderCurrentView();
+  },
+  // Thin pass-through to timer.js's startEmomTimer — same name, but this is
+  // the object-literal method `actions.startEmomTimer`, not a recursive
+  // call; the bare reference inside resolves to the module-level import.
+  startEmomTimer() {
+    startEmomTimer();
+  },
   // Switches which variant (e.g. standing vs seated calf raise) an
   // accessory slot is logging under for this session — relabels the
   // existing entries in place, keeping whatever weight/reps/completed
@@ -984,6 +1000,23 @@ subscribeRestTimer(({ remainingMs, label }) => {
     restTimerLabel.textContent = label || "";
   } else {
     restTimerEl.hidden = true;
+  }
+});
+
+// EMOM timer widget — a second floating bar (see the rest timer above), only
+// visible while the 20-minute KB swing/assault bike EMOM is running.
+const emomTimerEl = document.getElementById("emom-timer");
+const emomTimerTime = document.getElementById("emom-timer-time");
+const emomTimerLabel = document.getElementById("emom-timer-label");
+document.getElementById("emom-timer-cancel").addEventListener("click", () => cancelEmomTimer());
+
+subscribeEmomTimer((state) => {
+  if (state) {
+    emomTimerEl.hidden = false;
+    emomTimerTime.textContent = formatMs(state.remainingMs);
+    emomTimerLabel.textContent = `Min ${state.minuteNumber}/${state.totalMinutes} · ${state.phase}`;
+  } else {
+    emomTimerEl.hidden = true;
   }
 });
 

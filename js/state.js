@@ -153,6 +153,26 @@ export function lastAccessoryLog(sessionLogs, exerciseName, setIndex) {
   return null;
 }
 
+/** Most recent logged {calories, kbWeight} for a "metcon"-kind accessory, for the "last session" comparison shown next to its fields. */
+export function lastMetconLog(sessionLogs, exerciseName) {
+  for (let i = sessionLogs.length - 1; i >= 0; i--) {
+    const entry = (sessionLogs[i].accessorySets || []).find((s) => s.exerciseName === exerciseName && s.calories != null);
+    if (entry) return { calories: entry.calories, kbWeight: entry.kbWeight ?? null };
+  }
+  return null;
+}
+
+/** Chronological {date, calories, kbWeight} history for a "metcon"-kind accessory, for History's chart/list. */
+export function metconHistory(sessionLogs, exerciseName) {
+  return sessionLogs
+    .filter((log) => log.completed)
+    .flatMap((log) => {
+      const entry = (log.accessorySets || []).find((s) => s.exerciseName === exerciseName && s.calories != null);
+      return entry ? [{ date: log.date, calories: entry.calories, kbWeight: entry.kbWeight ?? null }] : [];
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
 // A Legs session is identified by its lift (squat or deadlift), not by day
 // index or name — this works identically for a current Legs A/B session and
 // any older squat/deadlift session logged under a since-retired day
@@ -397,14 +417,19 @@ export function newSessionLog({ dayIndex, weekIndex, cycleNumber }, mainSets, su
     // under its default (first) variant's real name, never the generic
     // slot name — history/prefill is always keyed by the concrete exercise
     // actually performed, and the day's original choice stays the default.
+    // A "metcon" kind (e.g. the KB swing/assault bike EMOM) isn't a sets
+    // grid at all — just one entry carrying its own calories/kbWeight
+    // fields instead of weight/reps, completed once calories is entered.
     accessorySets: accessories.flatMap((a) =>
-      Array.from({ length: a.sets || 1 }, (_, setIndex) => ({
-        exerciseName: a.variants ? a.variants[0] : a.name,
-        setIndex,
-        weight: null,
-        reps: null,
-        completed: false,
-      }))
+      a.kind === "metcon"
+        ? [{ exerciseName: a.name, setIndex: 0, calories: null, kbWeight: null, completed: false }]
+        : Array.from({ length: a.sets || 1 }, (_, setIndex) => ({
+            exerciseName: a.variants ? a.variants[0] : a.name,
+            setIndex,
+            weight: null,
+            reps: null,
+            completed: false,
+          }))
     ),
     notes: "",
   };

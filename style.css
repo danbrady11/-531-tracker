@@ -787,6 +787,14 @@ canvas.chart-canvas[hidden] {
   margin-right: 4px;
 }
 
+/* Stacked above the rest timer bar, in a distinct color, so both can show
+   at once without overlapping (unlikely in practice, but the two timers are
+   fully independent). */
+.emom-timer {
+  bottom: calc(var(--tab-height) + env(safe-area-inset-bottom, 0px) + 68px);
+  background: var(--warn);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

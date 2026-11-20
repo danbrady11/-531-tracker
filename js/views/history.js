@@ -1,4 +1,4 @@
-import { bodyweightRollingAverage, combinedLiftMetricSeries, accessoryRepVolumeSeries, parseBulkWeightEntries } from "../state.js";
+import { bodyweightRollingAverage, combinedLiftMetricSeries, accessoryRepVolumeSeries, parseBulkWeightEntries, metconHistory } from "../state.js";
 import { drawLineChart, drawMultiLineChart } from "../chart.js";
 import { LIFT_META, CHART_LIFT_ORDER } from "../lift-meta.js";
 
@@ -11,6 +11,9 @@ const PULLUP_CHINUP_META = {
   "Chin-ups": { label: "Chin-ups", colorVar: "--rehab" },
 };
 const PULLUP_CHINUP_EXERCISES = Object.keys(PULLUP_CHINUP_META);
+
+// Logged identically under this name on both Pull A and Pull B — see program.js.
+const METCON_EXERCISE_NAME = "Metcon: KB swing / Assault bike EMOM";
 
 function shortDate(iso) {
   const d = new Date(iso);
@@ -42,6 +45,13 @@ export function renderHistory(root, ctx) {
     </div>
 
     <div class="card">
+      <h3>Metcon: KB swing / Assault bike EMOM</h3>
+      <div class="chart-wrap"><canvas class="chart-canvas" id="metcon-chart"></canvas></div>
+      <div id="metcon-chart-empty"></div>
+      <div id="metcon-list" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
       <h3>Bodyweight</h3>
       <div class="field-row">
         <div class="field">
@@ -68,6 +78,7 @@ export function renderHistory(root, ctx) {
 
   renderLiftChart(root, state);
   renderPullupChinupChart(root, state);
+  renderMetconHistory(root, state);
   renderBodyweight(root, state, ctx);
 
   root.querySelectorAll("#metric-tabs .pill-tab").forEach((btn) =>
@@ -140,6 +151,30 @@ function renderPullupChinupChart(root, state) {
     (name) =>
       `<span class="legend-item"><span class="legend-swatch" style="background:var(${PULLUP_CHINUP_META[name].colorVar})"></span>${PULLUP_CHINUP_META[name].label}</span>`
   ).join("");
+}
+
+function renderMetconHistory(root, state) {
+  const entries = metconHistory(state.sessionLogs, METCON_EXERCISE_NAME);
+  const canvas = root.querySelector("#metcon-chart");
+  const points = entries.map((e) => ({ label: shortDate(e.date), value: e.calories }));
+  canvas.hidden = points.length === 0;
+  if (points.length) drawLineChart(canvas, points, { suffix: " cal" });
+  root.querySelector("#metcon-chart-empty").innerHTML = points.length
+    ? ""
+    : `<div class="empty-state">No metcon sessions logged yet.</div>`;
+
+  const list = root.querySelector("#metcon-list");
+  list.innerHTML = [...entries]
+    .reverse()
+    .slice(0, 10)
+    .map(
+      (e) =>
+        `<div class="bw-row">
+          <span>${new Date(e.date).toLocaleDateString()}</span>
+          <span>${e.calories} cal${e.kbWeight != null ? ` <span class="set-meta">(KB ${e.kbWeight} lb)</span>` : ""}</span>
+        </div>`
+    )
+    .join("");
 }
 
 function renderBodyweight(root, state, ctx) {

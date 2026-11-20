@@ -163,6 +163,115 @@ export function subscribeRestTimer(fn) {
   };
 }
 
+// EMOM timer: a second, independent timestamp-based timer (same screen-sleep
+// -safe design as the rest timer above) for a fixed 20-minute, 20-round
+// every-minute-on-the-minute workout — beeps at the start of every minute,
+// not just once at the end, and reports which minute/phase is active so the
+// UI can show "Swings" on odd minutes and "Bike" on even ones.
+const EMOM_KEY = "531-tracker-emom-timer-v1";
+const EMOM_TOTAL_MINUTES = 20;
+const EMOM_MINUTE_MS = 60 * 1000;
+let emomTickHandle = null;
+let emomListeners = [];
+
+function readEmomState() {
+  try {
+    const raw = localStorage.getItem(EMOM_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeEmomState(state) {
+  if (state) localStorage.setItem(EMOM_KEY, JSON.stringify(state));
+  else localStorage.removeItem(EMOM_KEY);
+}
+
+function emomPhaseForMinuteIndex(i) {
+  return i % 2 === 0 ? "Swings" : "Bike";
+}
+
+function emomNotify() {
+  const state = readEmomState();
+  if (!state) {
+    for (const fn of emomListeners) fn(null);
+    return;
+  }
+  const elapsed = Date.now() - state.startAt;
+  const remainingMs = Math.max(0, state.totalMs - elapsed);
+  const minuteIndex = Math.min(EMOM_TOTAL_MINUTES - 1, Math.floor(elapsed / EMOM_MINUTE_MS));
+  const phase = remainingMs > 0 ? emomPhaseForMinuteIndex(minuteIndex) : null;
+  for (const fn of emomListeners) {
+    fn(
+      remainingMs > 0
+        ? { remainingMs, minuteNumber: minuteIndex + 1, totalMinutes: EMOM_TOTAL_MINUTES, phase }
+        : null
+    );
+  }
+}
+
+function emomTickLoop() {
+  if (emomTickHandle) return;
+  emomTickHandle = setInterval(() => {
+    const state = readEmomState();
+    if (!state) {
+      stopEmomLoop();
+      return;
+    }
+    const elapsed = Date.now() - state.startAt;
+    if (elapsed >= state.totalMs) {
+      cancelEmomTimer();
+      return;
+    }
+    const minuteIndex = Math.floor(elapsed / EMOM_MINUTE_MS);
+    if (minuteIndex !== state.lastBeepedMinute) {
+      beep();
+      try {
+        navigator.vibrate?.(150);
+      } catch {}
+      writeEmomState({ ...state, lastBeepedMinute: minuteIndex });
+    }
+    emomNotify();
+  }, 250);
+}
+
+function stopEmomLoop() {
+  if (emomTickHandle) {
+    clearInterval(emomTickHandle);
+    emomTickHandle = null;
+  }
+}
+
+/** Starts a fresh 20-minute, 20-round EMOM (Swings on odd minutes, Bike on even), beeping at the start of each minute. */
+export function startEmomTimer() {
+  const now = Date.now();
+  writeEmomState({ startAt: now, totalMs: EMOM_TOTAL_MINUTES * EMOM_MINUTE_MS, lastBeepedMinute: -1 });
+  acquireWakeLock();
+  emomTickLoop();
+  emomNotify();
+}
+
+export function cancelEmomTimer() {
+  writeEmomState(null);
+  stopEmomLoop();
+  releaseWakeLock();
+  emomNotify();
+}
+
+export function isEmomTimerActive() {
+  const state = readEmomState();
+  if (!state) return false;
+  return Date.now() - state.startAt < state.totalMs;
+}
+
+export function subscribeEmomTimer(fn) {
+  emomListeners.push(fn);
+  return () => {
+    emomListeners = emomListeners.filter((l) => l !== fn);
+  };
+}
+
 export function formatMs(ms) {
   const totalSec = Math.ceil(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -179,6 +288,16 @@ if (typeof window !== "undefined") {
   } else {
     fireExpiryIfNeeded();
   }
+  // The EMOM timer has no single "missed alert" to catch up on — if it
+  // fully elapsed while the page was closed, there's nothing left to do
+  // but let it read as inactive; resuming it mid-run just picks the ticking
+  // back up (and the per-minute beep loop skips any boundary already past).
+  if (isEmomTimerActive()) {
+    emomTickLoop();
+  } else {
+    writeEmomState(null);
+  }
+  emomNotify();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (isRestTimerActive()) {
@@ -186,6 +305,12 @@ if (typeof window !== "undefined") {
     } else {
       fireExpiryIfNeeded();
     }
+    if (isEmomTimerActive()) {
+      acquireWakeLock();
+    } else {
+      writeEmomState(null);
+    }
     notify();
+    emomNotify();
   });
 }

@@ -261,19 +261,26 @@ const CURRENT_SESSION_ACCESSORY_BACKFILLS = [
   { dayIndex: 4, exerciseName: "Machine crunch", sets: 3 },
   { dayIndex: 3, exerciseName: "Reverse pec deck / cable reverse fly", sets: 3 },
   { dayIndex: 6, exerciseName: "Reverse pec deck / cable reverse fly", sets: 3 },
+  // "metcon" backfills get a single calories/kbWeight entry instead of a
+  // sets grid (see newSessionLog in state.js) — sets is unused for these.
+  { dayIndex: 1, exerciseName: "Metcon: KB swing / Assault bike EMOM", kind: "metcon" },
+  { dayIndex: 4, exerciseName: "Metcon: KB swing / Assault bike EMOM", kind: "metcon" },
 ];
 
 function backfillCurrentSessionAccessories(currentSession, sessionLogs) {
   if (!currentSession) return currentSession;
   let accessorySets = currentSession.accessorySets || [];
   let changed = false;
-  for (const { dayIndex, exerciseName, sets } of CURRENT_SESSION_ACCESSORY_BACKFILLS) {
+  for (const { dayIndex, exerciseName, sets, kind } of CURRENT_SESSION_ACCESSORY_BACKFILLS) {
     if (currentSession.dayIndex !== dayIndex) continue;
     if (accessorySets.some((s) => s.exerciseName === exerciseName)) continue;
-    const newSets = Array.from({ length: sets }, (_, setIndex) => {
-      const prefill = lastAccessoryLog(sessionLogs, exerciseName, setIndex);
-      return { exerciseName, setIndex, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null, completed: false };
-    });
+    const newSets =
+      kind === "metcon"
+        ? [{ exerciseName, setIndex: 0, calories: null, kbWeight: null, completed: false }]
+        : Array.from({ length: sets }, (_, setIndex) => {
+            const prefill = lastAccessoryLog(sessionLogs, exerciseName, setIndex);
+            return { exerciseName, setIndex, weight: prefill?.weight ?? null, reps: prefill?.reps ?? null, completed: false };
+          });
     accessorySets = [...accessorySets, ...newSets];
     changed = true;
   }

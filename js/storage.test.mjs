@@ -747,6 +747,37 @@ test("migrate's Machine crunch backfill is idempotent — doesn't duplicate once
   assert.equal(migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Machine crunch").length, 3);
 });
 
+test("migrate backfills the metcon EMOM onto an in-progress Pull A or Pull B session as a single calories/kbWeight entry, not a sets grid", () => {
+  for (const dayIndex of [1, 4]) {
+    const state = {
+      ...ALL_MIGRATIONS_DONE,
+      sessionLogs: [],
+      currentSession: { ...sessionWith([{ exerciseName: "Curls", setIndex: 0, weight: 25, reps: 10, completed: true }]), dayIndex },
+    };
+    const migrated = migrate(state);
+    const metconSets = migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Metcon: KB swing / Assault bike EMOM");
+    assert.equal(metconSets.length, 1, `dayIndex ${dayIndex}`);
+    assert.deepEqual(
+      metconSets[0],
+      { exerciseName: "Metcon: KB swing / Assault bike EMOM", setIndex: 0, calories: null, kbWeight: null, completed: false },
+      `dayIndex ${dayIndex}`
+    );
+  }
+});
+
+test("migrate's metcon EMOM backfill is idempotent — doesn't duplicate once already present", () => {
+  const state = {
+    ...ALL_MIGRATIONS_DONE,
+    sessionLogs: [],
+    currentSession: {
+      ...sessionWith([{ exerciseName: "Metcon: KB swing / Assault bike EMOM", setIndex: 0, calories: 200, kbWeight: 35, completed: true }]),
+      dayIndex: 1,
+    },
+  };
+  const migrated = migrate(state);
+  assert.equal(migrated.currentSession.accessorySets.filter((s) => s.exerciseName === "Metcon: KB swing / Assault bike EMOM").length, 1);
+});
+
 test("migrate backfills Reverse pec deck / cable reverse fly onto an in-progress Squat or Deadlift session, prefilling from its own prior history", () => {
   for (const dayIndex of [3, 6]) {
     const state = {

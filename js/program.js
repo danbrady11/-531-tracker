@@ -56,6 +56,11 @@ export const DAYS = {
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Curls", sets: 4, repsLabel: "10–15" },
       { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Keep hips still; curl the ribs toward the pelvis.", variants: ["Machine crunch", "Cable crunch"] },
+      {
+        name: "Metcon: KB swing / Assault bike EMOM",
+        kind: "metcon",
+        description: "20-min EMOM, 10 rounds. Odd minutes: 10 kettlebell swings. Even minutes: max calories on assault bike.",
+      },
     ],
   },
   2: {
@@ -106,6 +111,11 @@ export const DAYS = {
       { name: "Hammer curls", sets: 3, repsLabel: "10–15" },
       { name: "Incline DB curl", sets: 3, repsLabel: "10–12" },
       { name: "Machine crunch", sets: 3, repsLabel: "10–15", cue: "Keep hips still; curl the ribs toward the pelvis.", variants: ["Machine crunch", "Cable crunch"] },
+      {
+        name: "Metcon: KB swing / Assault bike EMOM",
+        kind: "metcon",
+        description: "20-min EMOM, 10 rounds. Odd minutes: 10 kettlebell swings. Even minutes: max calories on assault bike.",
+      },
     ],
   },
   5: {

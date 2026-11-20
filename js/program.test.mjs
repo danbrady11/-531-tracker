@@ -121,6 +121,7 @@ test("Pull A (1): full exercise list in order", () => {
     "Lateral raise",
     "Curls",
     "Machine crunch",
+    "Metcon: KB swing / Assault bike EMOM",
   ]);
   assert.equal(accessoryDefFor(1, "Weighted pull-ups").sets, 4);
   assert.equal(accessoryDefFor(1, "Weighted pull-ups").repsLabel, "6–10");
@@ -141,6 +142,10 @@ test("Pull A (1): full exercise list in order", () => {
   assert.equal(crunch.repsLabel, "10–15");
   assert.equal(crunch.cue, "Keep hips still; curl the ribs toward the pelvis.");
   assert.deepEqual(crunch.variants, ["Machine crunch", "Cable crunch"]);
+  const metcon = accessoryDefFor(1, "Metcon: KB swing / Assault bike EMOM");
+  assert.equal(metcon.kind, "metcon");
+  assert.equal(metcon.sets, undefined, "no sets grid — it's a calories/KB-weight entry, not a sets-based accessory");
+  assert.equal(metcon.description, "20-min EMOM, 10 rounds. Odd minutes: 10 kettlebell swings. Even minutes: max calories on assault bike.");
 });
 
 test("Push A (2): full exercise list in order", () => {
@@ -204,6 +209,7 @@ test("Pull B (4): full exercise list in order", () => {
     "Hammer curls",
     "Incline DB curl",
     "Machine crunch",
+    "Metcon: KB swing / Assault bike EMOM",
   ]);
   const chinUps = accessoryDefFor(4, "Chin-ups");
   assert.equal(chinUps.sets, 4);
@@ -227,6 +233,9 @@ test("Pull B (4): full exercise list in order", () => {
   assert.equal(crunch.repsLabel, "10–15");
   assert.equal(crunch.cue, "Keep hips still; curl the ribs toward the pelvis.");
   assert.deepEqual(crunch.variants, ["Machine crunch", "Cable crunch"]);
+  const metcon = accessoryDefFor(4, "Metcon: KB swing / Assault bike EMOM");
+  assert.equal(metcon.kind, "metcon");
+  assert.equal(metcon.description, "20-min EMOM, 10 rounds. Odd minutes: 10 kettlebell swings. Even minutes: max calories on assault bike.");
 });
 
 test("Push B (5): full exercise list in order", () => {

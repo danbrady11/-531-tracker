@@ -1,6 +1,6 @@
 import { dayInfo, DAY_COUNT, restCategoryFor } from "../program.js";
 import { plateBreakdown, warmupSets, epleyE1RM, repsToBeatE1RM } from "../calc.js";
-import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceWeek, amrapHistory, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS } from "../state.js";
+import { lastAccessoryLog, effectiveWeekCount, lastCompletedByLift, advanceWeek, amrapHistory, tooSoonForLegsDay, WEEK_ADVANCE_LIFTS, lastMetconLog } from "../state.js";
 import { LIFT_META } from "../lift-meta.js";
 
 function escapeHtml(s) {
@@ -133,6 +133,46 @@ function checkableAccessoryRow(accessory, session) {
 }
 
 /**
+ * A "metcon"-kind accessory (the KB swing/assault bike EMOM): no sets grid
+ * and no rest timer — just two fields (total calories, required to count as
+ * complete; KB weight, optional), the last session's values shown alongside
+ * for comparison, and a button to start the standalone 20-minute EMOM timer
+ * (rendered as the floating widget app.js wires up, not inline here).
+ */
+function metconAccessoryRow(accessory, session, sessionLogs) {
+  const entry = (session.accessorySets || []).find((s) => s.exerciseName === accessory.name && s.setIndex === 0) || {
+    calories: null,
+    kbWeight: null,
+    completed: false,
+  };
+  const last = lastMetconLog(sessionLogs, accessory.name);
+  return `
+    <div class="accessory-block">
+      <div class="accessory-name">
+        <span>${entry.completed ? "✓ " : ""}${escapeHtml(accessory.name)}</span>
+      </div>
+      ${accessory.description ? `<div class="accessory-cue">${escapeHtml(accessory.description)}</div>` : ""}
+      <div class="field-row">
+        <div class="field">
+          <label>Total calories</label>
+          <input class="set-input" style="width:100%" type="number" inputmode="numeric" min="0"
+            value="${entry.calories ?? ""}" data-action="metcon-value" data-field="calories" data-exercise="${escapeHtml(accessory.name)}" />
+          ${last?.calories != null ? `<div class="set-meta">Last: ${last.calories} cal</div>` : ""}
+        </div>
+        <div class="field">
+          <label>KB weight (lb)</label>
+          <input class="set-input" style="width:100%" type="number" inputmode="decimal" step="2.5" min="0"
+            value="${entry.kbWeight ?? ""}" data-action="metcon-value" data-field="kbWeight" data-exercise="${escapeHtml(accessory.name)}" />
+          ${last?.kbWeight != null ? `<div class="set-meta">Last: ${last.kbWeight} lb</div>` : ""}
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-sm" data-action="start-emom">Start 20-min EMOM</button>
+      </div>
+    </div>`;
+}
+
+/**
  * Rest control under an accessory's sets: a normal per-category Rest button,
  * unless the exercise is part of a superset pair — the "a" exercise gets no
  * rest control at all (advance straight to "b"), and "b" gets no manual
@@ -171,6 +211,7 @@ function variantToggleHtml(accessory, activeName) {
 }
 
 function accessoryBlock(accessory, session, sessionLogs, restTimerSec) {
+  if (accessory.kind === "metcon") return metconAccessoryRow(accessory, session, sessionLogs);
   if (accessory.sets == null) return checkableAccessoryRow(accessory, session);
 
   const activeName = activeVariantName(accessory, session);
@@ -525,6 +566,10 @@ function wireActions(root, ctx) {
       actions.setAccessoryValue(el.dataset.exercise, Number(el.dataset.index), el.dataset.field, el.value === "" ? null : Number(el.value))
     )
   );
+  root.querySelectorAll('[data-action="metcon-value"]').forEach((el) =>
+    el.addEventListener("change", () => actions.setMetconValue(el.dataset.exercise, el.dataset.field, el.value === "" ? null : Number(el.value)))
+  );
+  root.querySelector('[data-action="start-emom"]')?.addEventListener("click", () => actions.startEmomTimer());
   root.querySelectorAll('[data-action="remove-ad-hoc"]').forEach((el) =>
     el.addEventListener("click", () => actions.removeAdHocExercise(el.dataset.exercise))
   );
