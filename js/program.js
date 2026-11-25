@@ -105,7 +105,7 @@ export const DAYS = {
       { name: "Chin-ups", sets: 4, repsLabel: "6–12" },
       { name: "Seated cable row (close grip)", sets: 4, repsLabel: "10–12" },
       { name: "Lat pulldown (close/neutral grip)", sets: 3, repsLabel: "10–12" },
-      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15" },
+      { name: "Shrugs (straps)", sets: 3, repsLabel: "12–15", variants: ["Shrugs (straps)", "Dumbbell shrugs"] },
       { name: "Reverse pec deck / cable reverse fly", sets: 3, repsLabel: "15–20" },
       { name: "Lateral raise", sets: 4, repsLabel: "12–20" },
       { name: "Hammer curls", sets: 3, repsLabel: "10–15" },

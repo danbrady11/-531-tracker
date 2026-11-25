@@ -218,8 +218,10 @@ test("Pull B (4): full exercise list in order", () => {
   assert.equal(accessoryDefFor(4, "Seated cable row (close grip)").repsLabel, "10–12");
   assert.equal(accessoryDefFor(4, "Lat pulldown (close/neutral grip)").sets, 3);
   assert.equal(accessoryDefFor(4, "Lat pulldown (close/neutral grip)").repsLabel, "10–12");
-  assert.equal(accessoryDefFor(4, "Shrugs (straps)").sets, 3);
-  assert.equal(accessoryDefFor(4, "Shrugs (straps)").repsLabel, "12–15");
+  const shrugs = accessoryDefFor(4, "Shrugs (straps)");
+  assert.equal(shrugs.sets, 3);
+  assert.equal(shrugs.repsLabel, "12–15");
+  assert.deepEqual(shrugs.variants, ["Shrugs (straps)", "Dumbbell shrugs"]);
   assert.equal(accessoryDefFor(4, "Reverse pec deck / cable reverse fly").sets, 3);
   assert.equal(accessoryDefFor(4, "Reverse pec deck / cable reverse fly").repsLabel, "15–20");
   assert.equal(accessoryDefFor(4, "Lateral raise").sets, 4);
